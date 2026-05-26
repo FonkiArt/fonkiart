@@ -250,6 +250,21 @@ body { font-family:'DM Sans',sans-serif;background:#fdfcf8;color:#1c1a18; }
 .contact-form-box { background:#fff;padding:36px;border:1px solid var(--border); }
 .contact-form-box h3 { font-family:'Cormorant Garamond',serif;font-size:22px;font-weight:300;margin-bottom:22px; }
 
+/* ── WELCOME POPUP ── */
+.welcome-modal { background:#fff;max-width:420px;width:100%;padding:0;overflow:hidden;animation:su .4s cubic-bezier(.25,.46,.45,.94);position:relative; }
+.welcome-top { background:var(--sidebar-bg);padding:36px 36px 28px;text-align:center; }
+.welcome-badge { display:inline-block;background:var(--gold);color:#fff;font-size:11px;letter-spacing:.18em;text-transform:uppercase;padding:5px 14px;border-radius:20px;margin-bottom:18px; }
+.welcome-pct { font-family:'Cormorant Garamond',serif;font-size:72px;font-weight:300;color:#fff;line-height:1; }
+.welcome-off { font-family:'Cormorant Garamond',serif;font-size:22px;font-weight:300;color:var(--gold);letter-spacing:.08em; }
+.welcome-body { padding:28px 36px 32px;text-align:center; }
+.welcome-body p { font-size:14px;color:var(--muted);line-height:1.7;margin-bottom:20px; }
+.coupon-box { background:var(--cream);border:2px dashed var(--gold);padding:14px 20px;margin-bottom:20px;display:flex;align-items:center;justify-content:center;gap:12px; }
+.coupon-code { font-family:'Cormorant Garamond',serif;font-size:24px;font-weight:600;letter-spacing:.1em;color:var(--ink); }
+.coupon-copy { background:none;border:none;cursor:pointer;font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:var(--gold);font-family:'DM Sans',sans-serif;padding:4px 8px;transition:all .2s; }
+.coupon-copy:hover { color:var(--ink); }
+.welcome-close-x { position:absolute;top:14px;right:16px;background:none;border:none;cursor:pointer;color:rgba(255,255,255,.5);font-size:20px;line-height:1;transition:color .2s; }
+.welcome-close-x:hover { color:#fff; }
+
 /* ── MOBILE ── */
 .sidebar-overlay { display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:190; }
 @media(max-width:900px){
@@ -293,9 +308,13 @@ export default function App() {
   const [page, setPage] = useState("home");
   const [data, setData] = useState(null);
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [showWelcome, setShowWelcome] = useState(false);
 
   useEffect(() => {
     loadData().then(d => setData(d || JSON.parse(JSON.stringify(DEFAULT_STATE))));
+    if (!sessionStorage.getItem("fonkiart-welcome-seen")) {
+      setTimeout(() => setShowWelcome(true), 1500);
+    }
   }, []);
 
   const updateData = async (patch) => {
@@ -374,6 +393,7 @@ export default function App() {
             </div>
           </div>
 
+          {showWelcome && <WelcomeModal onClose={() => { setShowWelcome(false); sessionStorage.setItem("fonkiart-welcome-seen","1"); }} />}
           {page === "home"     && <HomePage setPage={setPage} />}
           {page === "catalog"  && <CatalogPage data={data} />}
           {page === "special"  && <SpecialOrdersPage />}
@@ -385,6 +405,36 @@ export default function App() {
         </div>
       </div>
     </>
+  );
+}
+
+// ─── WELCOME POPUP ──────────────────────────
+function WelcomeModal({ onClose }) {
+  const [copied, setCopied] = useState(false);
+  const copy = () => {
+    navigator.clipboard.writeText("F15Key-welcome").then(() => {
+      setCopied(true); setTimeout(() => setCopied(false), 2000);
+    });
+  };
+  return (
+    <div className="modal-bg" onClick={onClose}>
+      <div className="welcome-modal" onClick={e => e.stopPropagation()}>
+        <button className="welcome-close-x" onClick={onClose}>✕</button>
+        <div className="welcome-top">
+          <div className="welcome-badge">Welcome Gift</div>
+          <div className="welcome-pct">15%</div>
+          <div className="welcome-off">OFF your first purchase</div>
+        </div>
+        <div className="welcome-body">
+          <p>Use the code below at checkout to receive 15% off any original piece from the Fonkiart collection.</p>
+          <div className="coupon-box">
+            <span className="coupon-code">F15Key-welcome</span>
+            <button className="coupon-copy" onClick={copy}>{copied ? "✓ Copied!" : "Copy"}</button>
+          </div>
+          <button className="btn-p" style={{ width:"100%", background:"var(--gold)" }} onClick={onClose}>Browse the Collection</button>
+        </div>
+      </div>
+    </div>
   );
 }
 
