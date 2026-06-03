@@ -3462,6 +3462,7 @@ function ItemForm({ data, updateData, addArtwork, editArtwork, editItem, setEdit
   const [status, setStatus] = useState("");
   const [uploading, setUploading] = useState(false);
   const [newCatInput, setNewCatInput] = useState("");
+  const [previewImg, setPreviewImg] = useState(null);
   const multiFileRef = useRef();
 
   useEffect(() => {
@@ -3524,32 +3525,62 @@ function ItemForm({ data, updateData, addArtwork, editArtwork, editItem, setEdit
       {status==="saving"       && <div className="warn-msg" style={{background:"#f0f8ff",borderColor:"#b0d4f0",color:"#1a4a7a"}}>Saving…</div>}
       {status==="upload-error" && <div className="warn-msg">⚠ Upload failed. Check that the "artworks" bucket is public in Supabase Storage.</div>}
 
+      {previewImg && (
+        <div onClick={() => setPreviewImg(null)} style={{
+          position:"fixed",inset:0,background:"rgba(0,0,0,.82)",zIndex:9999,
+          display:"flex",alignItems:"center",justifyContent:"center",cursor:"zoom-out"
+        }}>
+          <img src={previewImg} alt="Preview" style={{maxWidth:"90vw",maxHeight:"90vh",objectFit:"contain",border:"2px solid var(--gold)",boxShadow:"0 8px 48px rgba(0,0,0,.6)"}} />
+          <button onClick={() => setPreviewImg(null)} style={{
+            position:"fixed",top:24,right:28,background:"rgba(255,255,255,.15)",border:"1px solid rgba(255,255,255,.3)",
+            color:"#fff",width:36,height:36,borderRadius:"50%",cursor:"pointer",fontSize:16,
+            display:"flex",alignItems:"center",justifyContent:"center"
+          }}>✕</button>
+        </div>
+      )}
+
       <div style={{marginBottom:16}}>
-        <label style={{display:"block",fontSize:11,letterSpacing:".12em",textTransform:"uppercase",color:"var(--muted)",marginBottom:8}}>Photos</label>
-        <div style={{display:"flex",gap:8,flexWrap:"wrap",alignItems:"flex-start"}}>
+        <label style={{display:"block",fontSize:11,letterSpacing:".12em",textTransform:"uppercase",color:"var(--muted)",marginBottom:8}}>
+          Photos <span style={{fontWeight:300,textTransform:"none",letterSpacing:0,fontSize:11}}>(click to preview)</span>
+        </label>
+        <div style={{display:"flex",gap:12,flexWrap:"wrap",alignItems:"flex-start"}}>
           {form.images.map((url, i) => (
-            <div key={i} style={{position:"relative",width:80,height:80,flexShrink:0}}>
-              <img src={url} style={{width:80,height:80,objectFit:"cover",border:"1px solid var(--border)",display:"block"}} alt={`photo ${i+1}`} />
-              <button onClick={() => handleRemovePhoto(i)} style={{
-                position:"absolute",top:-7,right:-7,width:20,height:20,borderRadius:"50%",
+            <div key={i} style={{position:"relative",width:220,height:220,flexShrink:0,cursor:"zoom-in"}} onClick={() => setPreviewImg(url)}>
+              <img src={url} style={{width:220,height:220,objectFit:"cover",border:"2px solid var(--border)",display:"block",transition:"border-color .2s"}}
+                onMouseEnter={e => e.currentTarget.style.borderColor="var(--gold)"}
+                onMouseLeave={e => e.currentTarget.style.borderColor="var(--border)"}
+                alt={`photo ${i+1}`} />
+              <button onClick={e => { e.stopPropagation(); handleRemovePhoto(i); }} style={{
+                position:"absolute",top:-8,right:-8,width:24,height:24,borderRadius:"50%",
                 background:"#c0392b",color:"#fff",border:"2px solid #fff",cursor:"pointer",
-                fontSize:10,lineHeight:1,display:"flex",alignItems:"center",justifyContent:"center",padding:0
+                fontSize:11,lineHeight:1,display:"flex",alignItems:"center",justifyContent:"center",padding:0,zIndex:2
               }}>✕</button>
-              {i===0 && <div style={{position:"absolute",bottom:0,left:0,right:0,background:"rgba(0,0,0,.55)",color:"#fff",fontSize:9,textAlign:"center",letterSpacing:".08em",padding:"2px 0",pointerEvents:"none"}}>MAIN</div>}
+              {i===0 && <div style={{position:"absolute",bottom:0,left:0,right:0,background:"rgba(0,0,0,.55)",color:"#fff",fontSize:10,textAlign:"center",letterSpacing:".08em",padding:"4px 0",pointerEvents:"none"}}>MAIN</div>}
+              <div style={{position:"absolute",inset:0,background:"rgba(0,0,0,0)",display:"flex",alignItems:"center",justifyContent:"center",transition:"background .2s",pointerEvents:"none"}}
+                className="img-hover-overlay">
+                <span style={{color:"#fff",fontSize:11,letterSpacing:".1em",opacity:0,transition:"opacity .2s"}}>🔍 Preview</span>
+              </div>
             </div>
           ))}
           {form.images.length < 6 && (
             <button onClick={() => multiFileRef.current.click()} disabled={uploading} style={{
-              width:80,height:80,border:"2px dashed var(--border)",background:"none",
-              cursor:uploading?"not-allowed":"pointer",color:"var(--muted)",fontSize:26,
-              display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0
-            }}>
-              {uploading ? "⏳" : "+"}
+              width:220,height:220,border:"2px dashed var(--border)",background:"none",
+              cursor:uploading?"not-allowed":"pointer",color:"var(--muted)",fontSize:36,
+              display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",
+              flexShrink:0,gap:8,transition:"border-color .2s"
+            }}
+              onMouseEnter={e => e.currentTarget.style.borderColor="var(--gold)"}
+              onMouseLeave={e => e.currentTarget.style.borderColor="var(--border)"}
+            >
+              {uploading ? <span style={{fontSize:28}}>⏳</span> : <>
+                <span style={{fontSize:36,lineHeight:1}}>+</span>
+                <span style={{fontSize:11,letterSpacing:".1em",textTransform:"uppercase"}}>Add Photo</span>
+              </>}
             </button>
           )}
         </div>
-        {uploading && <p style={{fontSize:12,color:"var(--muted)",marginTop:6}}>Uploading photo…</p>}
-        {form.images.length > 1 && <p style={{fontSize:11,color:"var(--muted)",marginTop:6}}>First photo is the main gallery image. Remove and re-add to change order.</p>}
+        {uploading && <p style={{fontSize:12,color:"var(--muted)",marginTop:8}}>Uploading photo…</p>}
+        {form.images.length > 1 && <p style={{fontSize:11,color:"var(--muted)",marginTop:8}}>First photo is the main gallery image. Remove and re-add to change order.</p>}
         <input ref={multiFileRef} type="file" accept="image/*" style={{display:"none"}} onChange={handleAddPhoto} />
       </div>
 
