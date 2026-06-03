@@ -132,10 +132,13 @@ body { font-family:'DM Sans',sans-serif;background:#fff;color:#1c1a18; }
 .hero-title { font-family:'Cormorant Garamond',serif;font-size:clamp(28px,4vw,58px);font-weight:300;line-height:1.05;color:#fff;margin-bottom:12px; }
 .hero-title em { font-style:italic;color:#ffe066;font-weight:600;font-size:1.25em; }
 .hero-sub { font-size:13px;color:#fff;line-height:1.6;max-width:320px; }
-.hero-right { position:relative;overflow:hidden;background:#e8e2d9;border:3px solid #d4a847; }
+.hero-right { position:relative;overflow:hidden;background:#e8e2d9;border:3px solid #d4a847;display:grid;grid-template-columns:1fr 1fr 1fr; }
 .hero-shop-btn { position:absolute;bottom:20px;left:50%;transform:translateX(-50%);z-index:10;background:rgba(10,8,6,.55);backdrop-filter:blur(6px);border:1px solid rgba(212,168,71,.6);color:#fff;padding:10px 20px;cursor:pointer;font-family:'DM Sans',sans-serif;font-size:12px;letter-spacing:.14em;text-transform:uppercase;transition:all .25s;white-space:nowrap; }
 .hero-shop-btn:hover { background:#d4a847;border-color:#d4a847; }
-.hero-slide { position:absolute;inset:0;background-size:cover;background-position:center;transition:opacity 1.2s ease; }
+.hero-panel { position:relative;overflow:hidden;background:#f5f2ee;display:flex;align-items:center;justify-content:center;border-right:1px solid #d4a847; }
+.hero-panel:last-child { border-right:none; }
+.hero-panel img { width:100%;height:100%;object-fit:contain;display:block; }
+.hero-slide { display:none; }
 .hero-slide-dot { width:6px;height:6px;border-radius:50%;border:1px solid rgba(255,255,255,.6);background:transparent;cursor:pointer;transition:background .3s;padding:0; }
 .hero-slide-dot.active { background:rgba(255,255,255,.9); }
 
@@ -380,7 +383,8 @@ body { font-family:'DM Sans',sans-serif;background:#fff;color:#1c1a18; }
   /* Hero */
   .hero { grid-template-columns:1fr;min-height:auto; }
   .hero-left { padding:10px 14px 12px;min-height:0; }
-  .hero-right { display:block;height:260px; }
+  .hero-right { grid-template-columns:1fr;height:240px; }
+  .hero-panel:not(:first-child) { display:none; }
   .hero-title { font-size:clamp(18px,6vw,28px);margin-bottom:4px; }
   .hero-eyebrow { font-size:13px;margin-bottom:4px; }
   .hero-sub { display:none; }
@@ -1334,24 +1338,14 @@ function HomePage({ setPage, data, addToCart, cart }) {
         </div>
         <div className="hero-right">
           {slides.length === 0
-            ? <div style={{ width:"100%", height:"100%", background:"linear-gradient(135deg,#e8e2d9,#d4cdc4)" }} />
-            : slides.map((item, i) => (
-                <div key={item.id} className="hero-slide"
-                  style={{ backgroundImage:`url(${item.image})`, opacity: i === idx ? 1 : 0 }} />
+            ? <div style={{ gridColumn:"1/-1", background:"linear-gradient(135deg,#e8e2d9,#d4cdc4)" }} />
+            : slides.slice(0, 3).map((item, i) => (
+                <div key={item.id} className="hero-panel">
+                  <img src={item.image} alt={item.title} />
+                </div>
               ))
           }
-          {slides.length > 0 && (
-            <button className="hero-shop-btn" onClick={() => setPage("catalog")}>
-              {slides[idx]?.title ? `${slides[idx].title} — ` : ""}Shop Now →
-            </button>
-          )}
-          {slides.length > 1 && (
-            <div style={{ position:"absolute", bottom:16, left:"50%", transform:"translateX(-50%)", display:"flex", gap:8, zIndex:10 }}>
-              {slides.map((_, i) => (
-                <button key={i} className={`hero-slide-dot${i === idx ? " active" : ""}`} onClick={() => setIdx(i)} />
-              ))}
-            </div>
-          )}
+          <button className="hero-shop-btn" onClick={() => setPage("catalog")}>Shop the Collection →</button>
         </div>
       </div>
 
