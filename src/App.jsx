@@ -1316,7 +1316,7 @@ function WelcomeModal({ onClose, discount = 15, artworks = [] }) {
 
 // ─── HOME ───────────────────────────────────
 function HomePage({ setPage, data, addToCart, cart }) {
-  const slides = (data?.items || []).filter(i => i.image && !i.isSold);
+  const slides = (data?.items || []).filter(i => i.image);
   const [idx, setIdx] = useState(0);
   useEffect(() => {
     if (slides.length < 2) return;
