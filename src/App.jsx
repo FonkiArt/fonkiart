@@ -1319,13 +1319,11 @@ function WelcomeModal({ onClose, discount = 15, artworks = [] }) {
 
 // ─── HOME ───────────────────────────────────
 function HomePage({ setPage, data, addToCart, cart }) {
-  const slides = (data?.items || []).filter(i => i.image);
-  const [idx, setIdx] = useState(0);
-  useEffect(() => {
-    if (slides.length < 2) return;
-    const t = setInterval(() => setIdx(i => (i + 1) % slides.length), 4000);
-    return () => clearInterval(t);
-  }, [slides.length]);
+  const allImgs = (data?.items || []).filter(i => i.image);
+  const slides = useMemo(() => {
+    const shuffled = [...allImgs].sort(() => Math.random() - 0.5);
+    return shuffled.slice(0, 3);
+  }, [data?.items?.length]);
 
   return (
     <div>
