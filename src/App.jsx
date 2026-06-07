@@ -23,6 +23,38 @@ function generateCouponCode() {
   return `FK-${part(4)}-${part(4)}`;
 }
 
+async function hashPassword(pw) {
+  const buf = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(pw));
+  return Array.from(new Uint8Array(buf)).map(b => b.toString(16).padStart(2, "0")).join("");
+}
+
+// Sends email via serverless proxy in production; falls back to direct Brevo in local dev.
+// In production (fonkiart.com / Vercel), VITE_BREVO_API_KEY is intentionally NOT set —
+// only the server-side BREVO_API_KEY is set, keeping the key out of the browser bundle.
+async function sendEmail({ to, subject, htmlContent, replyTo } = {}) {
+  const toArr = typeof to === "string" ? [{ email: to }] : to;
+  const payload = { sender: { name: "Fonkiart", email: BREVO_SENDER }, to: toArr, subject, htmlContent };
+  if (replyTo) payload.replyTo = { email: replyTo };
+
+  const isLocal = window.location.hostname === "localhost" || window.location.hostname.startsWith("192.168.");
+  if (isLocal && BREVO_API_KEY) {
+    const r = await fetch("https://api.brevo.com/v3/smtp/email", {
+      method: "POST",
+      headers: { accept: "application/json", "api-key": BREVO_API_KEY, "content-type": "application/json" },
+      body: JSON.stringify(payload),
+    });
+    if (!r.ok) throw new Error(`Brevo ${r.status}`);
+    return;
+  }
+
+  const r = await fetch("/api/send-email", {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify(payload),
+  });
+  if (!r.ok) throw new Error(`Email API ${r.status}`);
+}
+
 const NAV_ITEMS = [
   { id: "home",        label: "Home",             Icon: Home },
   { id: "catalog",     label: "Catalog",           Icon: LayoutGrid },
@@ -613,15 +645,10 @@ function InvoicePage({ token }) {
     setApproving(true);
     try {
       await supabase.from("Orders").update({ invoice_approved: true, status: "confirmed" }).eq("id", order.id);
-      await fetch("https://api.brevo.com/v3/smtp/email", {
-        method: "POST",
-        headers: { "accept":"application/json","api-key":BREVO_API_KEY,"content-type":"application/json" },
-        body: JSON.stringify({
-          sender: { name:"Fonkiart", email:BREVO_SENDER },
-          to: [{ email:BREVO_SENDER }],
-          subject: `Invoice approved — ${order.item_title}`,
-          htmlContent: `<div style="font-family:Georgia,serif;max-width:480px;margin:0 auto;padding:32px;background:#fdfcf8;"><h1 style="font-size:22px;font-weight:300;color:#1c1a18;margin-bottom:16px;">Invoice Approved</h1><p style="color:#7a6f63;font-size:15px;line-height:1.7;"><strong>${order.client_name || order.client_email}</strong> approved the invoice for <strong>${order.item_title}</strong> — $${Number(order.amount).toLocaleString()}.</p></div>`
-        })
+      await sendEmail({
+        to: BREVO_SENDER,
+        subject: `Invoice approved — ${order.item_title}`,
+        htmlContent: `<div style="font-family:Georgia,serif;max-width:480px;margin:0 auto;padding:32px;background:#fdfcf8;"><h1 style="font-size:22px;font-weight:300;color:#1c1a18;margin-bottom:16px;">Invoice Approved</h1><p style="color:#7a6f63;font-size:15px;line-height:1.7;"><strong>${order.client_name || order.client_email}</strong> approved the invoice for <strong>${order.item_title}</strong> — $${Number(order.amount).toLocaleString()}.</p></div>`,
       });
       setApproved(true);
     } catch(e) { console.warn("Approve error:", e); }
@@ -882,6 +909,8 @@ export default function App() {
       isNew: !!item.isNew,
       isSold: !!item.isSold,
       isChildren: !!item.isChildren,
+      isCollectorsOnly: !!item.isCollectorsOnly,
+      isEarlyAccess: !!item.isEarlyAccess,
       stripeLink: item.stripeLink || '',
     };
   };
@@ -909,20 +938,6 @@ export default function App() {
     await supabase.from("Artworks").update(patch).eq("id", id);
     setArtworks(prev => prev.map(a => a.id === id ? { ...a, ...patch } : a));
   };
-
-  // Auto-migrate localStorage artworks to Supabase on first load
-  useEffect(() => {
-    if (!data || !supabase) return;
-    if (artworks.length === 0 && data.items?.length > 0) {
-      const cleaned = data.items.map(cleanArtwork);
-      supabase.from("Artworks").insert(cleaned)
-        .then(({ error }) => {
-          if (error) console.error("Auto-migrate failed:", error);
-          else loadArtworks();
-        })
-        .catch(e => console.error("Auto-migrate artworks:", e));
-    }
-  }, [data, artworks.length]);
 
   const mergedData = data ? { ...data, items: artworks.length > 0 ? artworks : (data.items || []) } : null;
 
@@ -1215,17 +1230,11 @@ function WelcomeModal({ onClose, discount = 15, artworks = [] }) {
       setReturning(isReturning);
       setAlreadyUsed(isUsed);
       if (!isReturning) {
-        const res = await fetch("https://api.brevo.com/v3/smtp/email", {
-          method: "POST",
-          headers: { "accept": "application/json", "api-key": BREVO_API_KEY, "content-type": "application/json" },
-          body: JSON.stringify({
-            sender: { name: "Fonkiart", email: BREVO_SENDER },
-            to: [{ email }],
-            subject: `Your ${discount}% Welcome Coupon — Fonkiart`,
-            htmlContent: `<div style="font-family:Georgia,serif;max-width:480px;margin:0 auto;padding:32px;background:#fdfcf8;"><h1 style="font-size:28px;font-weight:300;color:#1c1a18;margin-bottom:8px;">Welcome to Fonkiart</h1><p style="color:#7a6f63;font-size:15px;line-height:1.7;margin-bottom:24px;">Thank you for joining. Here is your exclusive welcome coupon:</p><div style="background:#fff;border:2px dashed #c9a96e;padding:20px 24px;text-align:center;margin-bottom:24px;"><div style="font-size:28px;font-weight:600;letter-spacing:2px;color:#1c1a18;">${code}</div><div style="font-size:13px;color:#7a6f63;margin-top:6px;">${discount}% off your first purchase</div></div><p style="color:#7a6f63;font-size:13px;line-height:1.7;">Enter this code at checkout. Valid on original art and prints. One use per customer.</p><p style="color:#7a6f63;font-size:13px;">— Fonkiart</p></div>`
-          })
+        await sendEmail({
+          to: email,
+          subject: `Your ${discount}% Welcome Coupon — Fonkiart`,
+          htmlContent: `<div style="font-family:Georgia,serif;max-width:480px;margin:0 auto;padding:32px;background:#fdfcf8;"><h1 style="font-size:28px;font-weight:300;color:#1c1a18;margin-bottom:8px;">Welcome to Fonkiart</h1><p style="color:#7a6f63;font-size:15px;line-height:1.7;margin-bottom:24px;">Thank you for joining. Here is your exclusive welcome coupon:</p><div style="background:#fff;border:2px dashed #c9a96e;padding:20px 24px;text-align:center;margin-bottom:24px;"><div style="font-size:28px;font-weight:600;letter-spacing:2px;color:#1c1a18;">${code}</div><div style="font-size:13px;color:#7a6f63;margin-top:6px;">${discount}% off your first purchase</div></div><p style="color:#7a6f63;font-size:13px;line-height:1.7;">Enter this code at checkout. Valid on original art and prints. One use per customer.</p><p style="color:#7a6f63;font-size:13px;">— Fonkiart</p></div>`,
         });
-        if (!res.ok) { const t = await res.text(); console.error("Brevo error:", res.status, t); setErr("Email: " + res.status + " " + t); setLoading(false); return; }
       }
     } catch(e) { console.error("Error:", e); setErr("Error: " + e.message); setLoading(false); return; }
     setLoading(false);
@@ -1442,7 +1451,7 @@ function CatalogPage({ data, addToCart, cart, goHome, cartActivity = {} }) {
           : <div className="gallery-grid">
               {paginated.map(item => (
                 <div key={item.id} className="card" onClick={() => setSelected(item)}>
-                  <img src={item.image} alt={item.title} />
+                  <img src={item.image} alt={item.title} loading="lazy" />
                   {item.isChildren && <div className="card-children">❤️</div>}
                   {item.isSold && <div className="card-badge" style={{top:10,background:"#1c1a18",color:"#fff",letterSpacing:".14em"}}>Sold</div>}
                   {!item.isSold && item.salePrice && <div className="card-badge card-badge-sale" style={{top:10}}>Sale</div>}
@@ -1450,10 +1459,16 @@ function CatalogPage({ data, addToCart, cart, goHome, cartActivity = {} }) {
                   <div className="card-over">
                     <div className="card-cat">{item.category}</div>
                     <div className="card-title">{item.title}</div>
-                    <div className="card-price">{item.price ? `$${Number(item.price).toLocaleString()}` : <span style={{fontSize:11,letterSpacing:".1em",opacity:.75}}>Price on request</span>}</div>
+                    {item.salePrice
+                      ? <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:14}}>
+                          <span className="card-price" style={{marginBottom:0,color:"var(--gold)"}}>${Number(item.salePrice).toLocaleString()}</span>
+                          {item.price && <span style={{fontSize:11,color:"rgba(255,255,255,.5)",textDecoration:"line-through"}}>${Number(item.price).toLocaleString()}</span>}
+                        </div>
+                      : <div className="card-price">{item.price ? `$${Number(item.price).toLocaleString()}` : <span style={{fontSize:11,letterSpacing:".1em",opacity:.75}}>Price on request</span>}</div>
+                    }
                     {item.isSold
                       ? <button className="card-btn" disabled style={{opacity:.45,cursor:"default"}}>Sold Out</button>
-                      : <button className="card-btn" onClick={e => { e.stopPropagation(); item.price ? addToCart(item) : setPriceInquiry(item); }}>{item.price ? (cart?.find(i=>i.id===item.id) ? "✓ Added" : "Shop →") : "Inquire"}</button>
+                      : <button className="card-btn" onClick={e => { e.stopPropagation(); item.price || item.salePrice ? addToCart(item) : setPriceInquiry(item); }}>{item.price || item.salePrice ? (cart?.find(i=>i.id===item.id) ? "✓ Added" : "Shop →") : "Inquire"}</button>
                     }
                     {!item.isSold && (() => { const u = getUrgency(item.id); return (
                       <div style={{fontSize:10,color:"rgba(255,255,255,.8)",letterSpacing:".05em",marginTop:7,lineHeight:1.7,textAlign:"center"}}>
@@ -1591,12 +1606,8 @@ function PriceInquiryModal({ item, onClose }) {
           message: `Price inquiry for "${item.title}"${form.message ? ` — ${form.message}` : ""}. Phone: ${form.phone || "not provided"}.`,
           status: "new"
         }]),
-        fetch("https://api.brevo.com/v3/smtp/email", {
-          method:"POST",
-          headers:{"accept":"application/json","api-key":BREVO_API_KEY,"content-type":"application/json"},
-          body: JSON.stringify({
-            sender:{name:"Fonkiart",email:BREVO_SENDER},
-            to:[{email:BREVO_SENDER}],
+        sendEmail({
+            to: BREVO_SENDER,
             subject:`Enquiry about ${item.title}`,
             htmlContent:`<div style="font-family:Georgia,serif;max-width:520px;margin:0 auto;padding:32px;background:#fdfcf8;">
               <h2 style="font-size:22px;font-weight:300;color:#1c1a18;margin-bottom:4px;">Price Inquiry</h2>
@@ -1615,23 +1626,17 @@ function PriceInquiryModal({ item, onClose }) {
                 ${form.message ? `<p style="font-size:14px;color:#1c1a18;margin-top:10px;"><strong>Message:</strong> ${form.message}</p>` : ""}
               </div>
               <p style="font-size:12px;color:#aaa;margin-top:24px;">Sent from fonkiart.com</p>
-            </div>`
-          })
+            </div>`,
         }),
-        fetch("https://api.brevo.com/v3/smtp/email", {
-          method:"POST",
-          headers:{"accept":"application/json","api-key":BREVO_API_KEY,"content-type":"application/json"},
-          body: JSON.stringify({
-            sender:{name:"Fonkiart",email:BREVO_SENDER},
-            to:[{email:form.email}],
-            subject:`Your inquiry — ${item.title} · Fonkiart`,
-            htmlContent:`<div style="font-family:Georgia,serif;max-width:480px;margin:0 auto;padding:32px;background:#fdfcf8;">
+        sendEmail({
+          to: form.email,
+          subject:`Your inquiry — ${item.title} · Fonkiart`,
+          htmlContent:`<div style="font-family:Georgia,serif;max-width:480px;margin:0 auto;padding:32px;background:#fdfcf8;">
               <h1 style="font-size:24px;font-weight:300;color:#1c1a18;margin-bottom:8px;">Thank you, ${form.name.split(" ")[0]}!</h1>
               <p style="color:#7a6f63;font-size:15px;line-height:1.7;margin-bottom:24px;">We received your inquiry about <strong>${item.title}</strong> and will get back to you shortly with pricing and availability.</p>
               <p style="color:#7a6f63;font-size:13px;line-height:1.7;">Questions? Contact us at <a href="mailto:${BREVO_SENDER}" style="color:#c9a96e;">${BREVO_SENDER}</a>.</p>
               <p style="color:#7a6f63;font-size:13px;margin-top:16px;">— Fonkiart</p>
-            </div>`
-          })
+            </div>`,
         }),
       ]);
     } catch(e) { console.warn("Inquiry email:", e); }
@@ -1710,15 +1715,7 @@ function CheckoutModal({ item, settings, onClose }) {
     const addr = [customer.address, customer.city, customer.state, customer.zip, customer.country].filter(Boolean).join(", ");
     const discountNote = couponStatus === "valid" ? ` · ${discount}% coupon applied` : "";
     const notes = [customer.name, customer.phone, addr].filter(Boolean).join(" · ") + discountNote;
-    const sendMail = async (to, subject, html) => {
-      try {
-        await fetch("https://api.brevo.com/v3/smtp/email", {
-          method:"POST",
-          headers:{"accept":"application/json","api-key":BREVO_API_KEY,"content-type":"application/json"},
-          body:JSON.stringify({ sender:{name:"Fonkiart",email:BREVO_SENDER}, to:[{email:to}], subject, htmlContent:html })
-        });
-      } catch(e) { console.warn("Email:", e); }
-    };
+    const sendMail = async (to, subject, html) => { try { await sendEmail({ to, subject, htmlContent: html }); } catch(e) { console.warn("Email:", e); } };
     const priceStr = effectivePrice ? `$${Number(effectivePrice).toLocaleString()}` : "";
     const { data: existingClient } = await supabase.from("Clients").select("id").eq("email", customer.email).maybeSingle();
     const { data: orderData } = await supabase.from("Orders")
@@ -1740,12 +1737,12 @@ function CheckoutModal({ item, settings, onClose }) {
     ]);
   };
 
-  const markSold = () => supabase?.from("Artworks").update({ isSold: true }).eq("id", item.id);
-  const handleConfirmZelle   = async () => { setSaving(true); await saveOrder(); await markSold(); setSaving(false); setDone(true); };
-  const handleConfirmVenmo   = async () => { setSaving(true); await saveOrder(); await markSold(); setSaving(false); setDone(true); };
-  const handleConfirmCashApp = async () => { setSaving(true); await saveOrder(); await markSold(); setSaving(false); setDone(true); };
+  // markSold intentionally removed — Andy marks sold manually in Admin after verifying payment received
+  const handleConfirmZelle   = async () => { setSaving(true); await saveOrder(); setSaving(false); setDone(true); };
+  const handleConfirmVenmo   = async () => { setSaving(true); await saveOrder(); setSaving(false); setDone(true); };
+  const handleConfirmCashApp = async () => { setSaving(true); await saveOrder(); setSaving(false); setDone(true); };
   const handleCard = async () => {
-    setSaving(true); await saveOrder(); await markSold(); setSaving(false);
+    setSaving(true); await saveOrder(); setSaving(false);
     const link = item.stripeLink || settings.stripeLink;
     if (link) { window.open(link, "_blank"); setDone(true); }
     else alert("Card payment is being set up. Please use Zelle or contact Fonkiart directly.");
@@ -1953,17 +1950,23 @@ function NewCollectionsPage({ data, addToCart, cart, cartActivity = {} }) {
           : <div className="gallery-grid">
               {items.map(item => (
                 <div key={item.id} className="card" onClick={() => setSelected(item)}>
-                  <img src={item.image} alt={item.title} />
+                  <img src={item.image} alt={item.title} loading="lazy" />
                   {item.isChildren && <div className="card-children">❤️</div>}
                   {item.isSold && <div className="card-badge" style={{top:10,background:"#1c1a18",color:"#fff",letterSpacing:".14em"}}>Sold</div>}
                   {!item.isSold && <div className="card-badge card-badge-new" style={{top:10}}>New</div>}
                   <div className="card-over">
                     <div className="card-cat">{item.category}</div>
                     <div className="card-title">{item.title}</div>
-                    <div className="card-price">{item.price ? `$${Number(item.price).toLocaleString()}` : <span style={{fontSize:11,letterSpacing:".1em",opacity:.75}}>Price on request</span>}</div>
+                    {item.salePrice
+                      ? <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:14}}>
+                          <span className="card-price" style={{marginBottom:0,color:"var(--gold)"}}>${Number(item.salePrice).toLocaleString()}</span>
+                          {item.price && <span style={{fontSize:11,color:"rgba(255,255,255,.5)",textDecoration:"line-through"}}>${Number(item.price).toLocaleString()}</span>}
+                        </div>
+                      : <div className="card-price">{item.price ? `$${Number(item.price).toLocaleString()}` : <span style={{fontSize:11,letterSpacing:".1em",opacity:.75}}>Price on request</span>}</div>
+                    }
                     {item.isSold
                       ? <button className="card-btn" disabled style={{opacity:.45,cursor:"default"}}>Sold Out</button>
-                      : <button className="card-btn" onClick={e=>{e.stopPropagation(); item.price ? addToCart(item) : setPriceInquiry(item);}}>{item.price ? (cart?.find(i=>i.id===item.id) ? "✓ Added" : "Shop →") : "Inquire"}</button>
+                      : <button className="card-btn" onClick={e=>{e.stopPropagation(); item.price || item.salePrice ? addToCart(item) : setPriceInquiry(item);}}>{item.price || item.salePrice ? (cart?.find(i=>i.id===item.id) ? "✓ Added" : "Shop →") : "Inquire"}</button>
                     }
                     {!item.isSold && (() => { const u = getUrgency(item.id); return (
                       <div style={{fontSize:10,color:"rgba(255,255,255,.8)",letterSpacing:".05em",marginTop:7,lineHeight:1.7,textAlign:"center"}}>
@@ -1981,7 +1984,7 @@ function NewCollectionsPage({ data, addToCart, cart, cartActivity = {} }) {
       {selected && (
         <ArtworkModal item={selected} onClose={() => setSelected(null)}
           sold={!!selected.isSold}
-          onBuy={selected.isSold ? undefined : s => { setSelected(null); s.price ? setCheckout(s) : setPriceInquiry(s); }} />
+          onBuy={selected.isSold ? undefined : s => { setSelected(null); s.price || s.salePrice ? setCheckout(s) : setPriceInquiry(s); }} />
       )}
       {checkout && <CheckoutModal item={checkout} settings={data.settings} onClose={() => setCheckout(null)} />}
       {priceInquiry && <PriceInquiryModal item={priceInquiry} onClose={() => setPriceInquiry(null)} />}
@@ -2006,7 +2009,7 @@ function SpecialsPage({ data, addToCart, cart, cartActivity = {} }) {
           : <div className="gallery-grid">
               {items.map(item => (
                 <div key={item.id} className="card" onClick={() => setSelected(item)}>
-                  <img src={item.image} alt={item.title} />
+                  <img src={item.image} alt={item.title} loading="lazy" />
                   {item.isChildren && <div className="card-children">❤️</div>}
                   {item.isSold && <div className="card-badge" style={{top:10,background:"#1c1a18",color:"#fff",letterSpacing:".14em"}}>Sold</div>}
                   {!item.isSold && <div className="card-badge card-badge-sale" style={{top:10}}>Sale</div>}
@@ -2061,7 +2064,7 @@ function SoldPage({ data }) {
           : <div className="gallery-grid">
               {items.map(item => (
                 <div key={item.id} className="card" onClick={() => setSelected(item)}>
-                  <img src={item.image} alt={item.title} style={{filter:"grayscale(30%)"}} />
+                  <img src={item.image} alt={item.title} loading="lazy" style={{filter:"grayscale(30%)"}} />
                   <div style={{ position:"absolute", inset:0, background:"rgba(10,8,6,.45)", display:"flex", alignItems:"center", justifyContent:"center", pointerEvents:"none" }}>
                     <span style={{ fontFamily:"'Cormorant Garamond',serif", fontSize:13, letterSpacing:".25em", textTransform:"uppercase", color:"rgba(255,255,255,.75)", border:"1px solid rgba(255,255,255,.3)", padding:"5px 16px" }}>Sold</span>
                   </div>
@@ -2129,25 +2132,18 @@ function ContactPage({ data }) {
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email)) { setFormErr("Please enter a valid email address."); return; }
     setLoading(true);
     try { if (supabase) await supabase.from("Requests").insert([{ name:form.name, email:form.email, message:form.message, status:"new" }]); } catch(e) { console.warn("Supabase:", e); }
-    const sendMail = async (to, subject, html, replyTo) => {
-      try {
-        await fetch("https://api.brevo.com/v3/smtp/email", {
-          method: "POST",
-          headers: { "accept":"application/json", "api-key":BREVO_API_KEY, "content-type":"application/json" },
-          body: JSON.stringify({ sender:{name:"Fonkiart",email:BREVO_SENDER}, to:[{email:to}], ...(replyTo?{replyTo:{email:replyTo}}:{}), subject, htmlContent:html })
-        });
-      } catch(e) { console.warn("Brevo:", e); }
-    };
     await Promise.allSettled([
-      sendMail(BREVO_SENDER,
-        "Contact Form Request",
-        `<div style="font-family:Georgia,serif;max-width:520px;margin:0 auto;padding:32px;background:#fdfcf8;"><h2 style="font-size:22px;font-weight:300;color:#1c1a18;margin-bottom:20px;">New Contact Form Request</h2><p style="font-size:14px;color:#7a6f63;margin-bottom:6px;"><strong>Name:</strong> ${form.name}</p><p style="font-size:14px;color:#7a6f63;margin-bottom:6px;"><strong>Email:</strong> ${form.email}</p><p style="font-size:14px;color:#7a6f63;margin-bottom:16px;"><strong>Message:</strong></p><div style="background:#fff;border-left:3px solid #c9a96e;padding:14px 18px;font-size:14px;color:#1c1a18;line-height:1.7;">${form.message}</div><p style="font-size:12px;color:#aaa;margin-top:24px;">Sent from fonkiart.vercel.app</p></div>`,
-        form.email
-      ),
-      sendMail(form.email,
-        "We received your message — Fonkiart",
-        `<div style="font-family:Georgia,serif;max-width:480px;margin:0 auto;padding:32px;background:#fdfcf8;"><h1 style="font-size:26px;font-weight:300;color:#1c1a18;margin-bottom:8px;">Thank you, ${form.name.split(" ")[0]}!</h1><p style="color:#7a6f63;font-size:15px;line-height:1.7;margin-bottom:24px;">We received your message and will get back to you within 24–48 hours.</p><div style="background:#fff;border:1px solid #ece7dd;padding:16px 20px;margin-bottom:24px;border-left:3px solid #c9a96e;"><p style="font-size:13px;color:#8a8078;margin-bottom:8px;font-style:italic;">Your message:</p><p style="font-size:14px;color:#1c1a18;line-height:1.7;">${form.message}</p></div><p style="color:#7a6f63;font-size:13px;line-height:1.7;">Questions? Reply to this email or reach us at <a href="mailto:${BREVO_SENDER}" style="color:#c9a96e;">${BREVO_SENDER}</a>.</p><p style="color:#7a6f63;font-size:13px;margin-top:16px;">— Fonkiart</p></div>`
-      ),
+      sendEmail({
+        to: BREVO_SENDER,
+        subject: "Contact Form Request",
+        htmlContent: `<div style="font-family:Georgia,serif;max-width:520px;margin:0 auto;padding:32px;background:#fdfcf8;"><h2 style="font-size:22px;font-weight:300;color:#1c1a18;margin-bottom:20px;">New Contact Form Request</h2><p style="font-size:14px;color:#7a6f63;margin-bottom:6px;"><strong>Name:</strong> ${form.name}</p><p style="font-size:14px;color:#7a6f63;margin-bottom:6px;"><strong>Email:</strong> ${form.email}</p><p style="font-size:14px;color:#7a6f63;margin-bottom:16px;"><strong>Message:</strong></p><div style="background:#fff;border-left:3px solid #c9a96e;padding:14px 18px;font-size:14px;color:#1c1a18;line-height:1.7;">${form.message}</div><p style="font-size:12px;color:#aaa;margin-top:24px;">Sent from fonkiart.com</p></div>`,
+        replyTo: form.email,
+      }),
+      sendEmail({
+        to: form.email,
+        subject: "We received your message — Fonkiart",
+        htmlContent: `<div style="font-family:Georgia,serif;max-width:480px;margin:0 auto;padding:32px;background:#fdfcf8;"><h1 style="font-size:26px;font-weight:300;color:#1c1a18;margin-bottom:8px;">Thank you, ${form.name.split(" ")[0]}!</h1><p style="color:#7a6f63;font-size:15px;line-height:1.7;margin-bottom:24px;">We received your message and will get back to you within 24–48 hours.</p><div style="background:#fff;border:1px solid #ece7dd;padding:16px 20px;margin-bottom:24px;border-left:3px solid #c9a96e;"><p style="font-size:13px;color:#8a8078;margin-bottom:8px;font-style:italic;">Your message:</p><p style="font-size:14px;color:#1c1a18;line-height:1.7;">${form.message}</p></div><p style="color:#7a6f63;font-size:13px;line-height:1.7;">Questions? Reply to this email or reach us at <a href="mailto:${BREVO_SENDER}" style="color:#c9a96e;">${BREVO_SENDER}</a>.</p><p style="color:#7a6f63;font-size:13px;margin-top:16px;">— Fonkiart</p></div>`,
+      }),
     ]);
     setLoading(false);
     setSent(true);
@@ -2766,7 +2762,7 @@ function LeadsTab({ discount = 15 }) {
   const [couponFilter, setCouponFilter] = useState("all");
   const [creating, setCreating] = useState(false);
   const [newEmail, setNewEmail] = useState("");
-  const [sendEmail, setSendEmail] = useState(true);
+  const [couponEmailEnabled, setCouponEmailEnabled] = useState(true);
   const [createMsg, setCreateMsg] = useState(null);
 
   const reload = () => {
@@ -2799,22 +2795,17 @@ function LeadsTab({ discount = 15 }) {
     setCreateMsg({ type:"loading", text:"Creating…" });
     const { error } = await supabase.from("Leads").insert([{ email, source:"manual", coupon_code:code, coupon_used:false }]);
     if (error) { setCreateMsg({ type:"err", text:error.message }); return; }
-    if (sendEmail) {
+    if (couponEmailEnabled) {
       try {
-        await fetch("https://api.brevo.com/v3/smtp/email", {
-          method:"POST",
-          headers:{"accept":"application/json","api-key":BREVO_API_KEY,"content-type":"application/json"},
-          body:JSON.stringify({
-            sender:{name:"Fonkiart",email:BREVO_SENDER},
-            to:[{email}],
-            subject:"Your Exclusive Coupon — Fonkiart",
-            htmlContent:`<div style="font-family:Georgia,serif;max-width:480px;margin:0 auto;padding:32px;background:#fdfcf8;"><h1 style="font-size:28px;font-weight:300;color:#1c1a18;margin-bottom:8px;">A Gift From Fonkiart</h1><p style="color:#7a6f63;font-size:15px;line-height:1.7;margin-bottom:24px;">We have a special offer just for you:</p><div style="background:#fff;border:2px dashed #c9a96e;padding:20px 24px;text-align:center;margin-bottom:24px;"><div style="font-size:28px;font-weight:600;letter-spacing:2px;color:#1c1a18;">${code}</div><div style="font-size:13px;color:#7a6f63;margin-top:6px;">${discount}% off your purchase</div></div><p style="color:#7a6f63;font-size:13px;line-height:1.7;">Enter this code at checkout. One use only.</p><p style="color:#7a6f63;font-size:13px;">— Fonkiart</p></div>`
-          })
+        await sendEmail({
+          to: email,
+          subject: "Your Exclusive Coupon — Fonkiart",
+          htmlContent: `<div style="font-family:Georgia,serif;max-width:480px;margin:0 auto;padding:32px;background:#fdfcf8;"><h1 style="font-size:28px;font-weight:300;color:#1c1a18;margin-bottom:8px;">A Gift From Fonkiart</h1><p style="color:#7a6f63;font-size:15px;line-height:1.7;margin-bottom:24px;">We have a special offer just for you:</p><div style="background:#fff;border:2px dashed #c9a96e;padding:20px 24px;text-align:center;margin-bottom:24px;"><div style="font-size:28px;font-weight:600;letter-spacing:2px;color:#1c1a18;">${code}</div><div style="font-size:13px;color:#7a6f63;margin-top:6px;">${discount}% off your purchase</div></div><p style="color:#7a6f63;font-size:13px;line-height:1.7;">Enter this code at checkout. One use only.</p><p style="color:#7a6f63;font-size:13px;">— Fonkiart</p></div>`,
         });
       } catch(e) { console.warn("Email:", e); }
     }
-    setCreateMsg({ type:"ok", text:`Coupon ${code} created${sendEmail ? " and emailed to " + email : ""}.` });
-    setNewEmail(""); setCreating(false); setSendEmail(true);
+    setCreateMsg({ type:"ok", text:`Coupon ${code} created${couponEmailEnabled ? " and emailed to " + email : ""}.` });
+    setNewEmail(""); setCreating(false); setCouponEmailEnabled(true);
     reload();
   };
 
@@ -2840,7 +2831,7 @@ function LeadsTab({ discount = 15 }) {
             <input value={newEmail} onChange={e=>{setNewEmail(e.target.value);setCreateMsg(null);}} placeholder="customer@email.com" onKeyDown={e=>e.key==="Enter"&&createCoupon()} />
           </div>
           <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:16}}>
-            <input type="checkbox" id="sendCouponEmail" checked={sendEmail} onChange={e=>setSendEmail(e.target.checked)} style={{width:"auto"}} />
+            <input type="checkbox" id="sendCouponEmail" checked={couponEmailEnabled} onChange={e=>setCouponEmailEnabled(e.target.checked)} style={{width:"auto"}} />
             <label htmlFor="sendCouponEmail" style={{textTransform:"none",fontSize:13,letterSpacing:0,color:"var(--ink)"}}>Email the coupon to this customer</label>
           </div>
           {createMsg && (
@@ -2948,15 +2939,10 @@ function OrdersTab() {
         zelle_contact: inv.zelle_contact,
         stripe_link: inv.stripe_link,
       }]);
-      await fetch("https://api.brevo.com/v3/smtp/email", {
-        method: "POST",
-        headers: { "accept":"application/json","api-key":BREVO_API_KEY,"content-type":"application/json" },
-        body: JSON.stringify({
-          sender: { name:"Fonkiart", email:BREVO_SENDER },
-          to: [{ email }],
-          subject: `Your Fonkiart Invoice — ${inv.item_title}`,
-          htmlContent: `<div style="font-family:Georgia,serif;max-width:520px;margin:0 auto;padding:40px 32px;background:#fdfcf8;"><div style="text-align:center;margin-bottom:32px;padding-bottom:24px;border-bottom:1px solid #ece7dd;"><h1 style="font-family:'Georgia',serif;font-size:26px;font-weight:600;letter-spacing:.12em;text-transform:uppercase;color:#1c1a18;margin:0 0 4px;">Fonkiart</h1><p style="font-size:11px;letter-spacing:.18em;text-transform:uppercase;color:#8a8078;margin:0;">Original Art & Fine Art Prints</p></div><p style="color:#7a6f63;font-size:15px;line-height:1.7;margin-bottom:8px;">Hi ${name ? name.split(" ")[0] : "there"},</p><p style="color:#7a6f63;font-size:15px;line-height:1.7;margin-bottom:28px;">You have a new invoice from Fonkiart. Click below to review the details and approve your order.</p><table style="width:100%;border-collapse:collapse;margin-bottom:24px;"><tr><td style="padding:10px 0;border-bottom:1px solid #ece7dd;font-size:12px;letter-spacing:.1em;text-transform:uppercase;color:#8a8078;">Artwork / Item</td><td style="padding:10px 0;border-bottom:1px solid #ece7dd;font-size:15px;color:#1c1a18;text-align:right;">${inv.item_title}</td></tr>${inv.notes?`<tr><td style="padding:10px 0;border-bottom:1px solid #ece7dd;font-size:12px;letter-spacing:.1em;text-transform:uppercase;color:#8a8078;">Notes</td><td style="padding:10px 0;border-bottom:1px solid #ece7dd;font-size:13px;color:#1c1a18;text-align:right;">${inv.notes}</td></tr>`:""}<tr><td style="padding:14px 0 0;font-size:14px;font-weight:600;color:#1c1a18;">Total Due</td><td style="padding:14px 0 0;font-size:24px;color:#c9a96e;font-weight:600;text-align:right;">$${Number(inv.amount).toLocaleString()}</td></tr></table><div style="text-align:center;margin:32px 0;"><a href="${link}" style="display:inline-block;background:#1e3a52;color:#fff;padding:15px 40px;font-size:13px;letter-spacing:.1em;text-transform:uppercase;text-decoration:none;font-family:Georgia,serif;">Review & Approve →</a></div><p style="color:#8a8078;font-size:12px;line-height:1.7;text-align:center;">Questions? Reply to this email or contact us at <a href="mailto:${BREVO_SENDER}" style="color:#c9a96e;">${BREVO_SENDER}</a></p></div>`
-        })
+      await sendEmail({
+        to: email,
+        subject: `Your Fonkiart Invoice — ${inv.item_title}`,
+        htmlContent: `<div style="font-family:Georgia,serif;max-width:520px;margin:0 auto;padding:40px 32px;background:#fdfcf8;"><div style="text-align:center;margin-bottom:32px;padding-bottom:24px;border-bottom:1px solid #ece7dd;"><h1 style="font-family:'Georgia',serif;font-size:26px;font-weight:600;letter-spacing:.12em;text-transform:uppercase;color:#1c1a18;margin:0 0 4px;">Fonkiart</h1><p style="font-size:11px;letter-spacing:.18em;text-transform:uppercase;color:#8a8078;margin:0;">Original Art & Fine Art Prints</p></div><p style="color:#7a6f63;font-size:15px;line-height:1.7;margin-bottom:8px;">Hi ${name ? name.split(" ")[0] : "there"},</p><p style="color:#7a6f63;font-size:15px;line-height:1.7;margin-bottom:28px;">You have a new invoice from Fonkiart. Click below to review the details and approve your order.</p><table style="width:100%;border-collapse:collapse;margin-bottom:24px;"><tr><td style="padding:10px 0;border-bottom:1px solid #ece7dd;font-size:12px;letter-spacing:.1em;text-transform:uppercase;color:#8a8078;">Artwork / Item</td><td style="padding:10px 0;border-bottom:1px solid #ece7dd;font-size:15px;color:#1c1a18;text-align:right;">${inv.item_title}</td></tr>${inv.notes?`<tr><td style="padding:10px 0;border-bottom:1px solid #ece7dd;font-size:12px;letter-spacing:.1em;text-transform:uppercase;color:#8a8078;">Notes</td><td style="padding:10px 0;border-bottom:1px solid #ece7dd;font-size:13px;color:#1c1a18;text-align:right;">${inv.notes}</td></tr>`:""}<tr><td style="padding:14px 0 0;font-size:14px;font-weight:600;color:#1c1a18;">Total Due</td><td style="padding:14px 0 0;font-size:24px;color:#c9a96e;font-weight:600;text-align:right;">$${Number(inv.amount).toLocaleString()}</td></tr></table><div style="text-align:center;margin:32px 0;"><a href="${link}" style="display:inline-block;background:#1e3a52;color:#fff;padding:15px 40px;font-size:13px;letter-spacing:.1em;text-transform:uppercase;text-decoration:none;font-family:Georgia,serif;">Review & Approve →</a></div><p style="color:#8a8078;font-size:12px;line-height:1.7;text-align:center;">Questions? Reply to this email or contact us at <a href="mailto:${BREVO_SENDER}" style="color:#c9a96e;">${BREVO_SENDER}</a></p></div>`,
       });
       await load();
       setInv(invBlank);
@@ -2990,12 +2976,10 @@ function OrdersTab() {
     };
     const m = msgs[status]; if (!m) return;
     try {
-      await fetch("https://api.brevo.com/v3/smtp/email", {
-        method:"POST",
-        headers:{"accept":"application/json","api-key":BREVO_API_KEY,"content-type":"application/json"},
-        body:JSON.stringify({ sender:{name:"Fonkiart",email:BREVO_SENDER}, to:[{email:order.client_email}], subject:m.sub,
-          htmlContent:`<div style="font-family:Georgia,serif;max-width:480px;margin:0 auto;padding:32px;background:#fdfcf8;"><h1 style="font-size:24px;font-weight:300;color:#1c1a18;margin-bottom:6px;">Hi ${name}!</h1><p style="color:#7a6f63;font-size:15px;line-height:1.7;margin-bottom:24px;">${m.body}</p><p style="color:#7a6f63;font-size:13px;line-height:1.7;">Questions? Contact us at <a href="mailto:${BREVO_SENDER}" style="color:#c9a96e;">${BREVO_SENDER}</a>.</p><p style="color:#7a6f63;font-size:13px;margin-top:16px;">— Fonkiart</p></div>`
-        })
+      await sendEmail({
+        to: order.client_email,
+        subject: m.sub,
+        htmlContent: `<div style="font-family:Georgia,serif;max-width:480px;margin:0 auto;padding:32px;background:#fdfcf8;"><h1 style="font-size:24px;font-weight:300;color:#1c1a18;margin-bottom:6px;">Hi ${name}!</h1><p style="color:#7a6f63;font-size:15px;line-height:1.7;margin-bottom:24px;">${m.body}</p><p style="color:#7a6f63;font-size:13px;line-height:1.7;">Questions? Contact us at <a href="mailto:${BREVO_SENDER}" style="color:#c9a96e;">${BREVO_SENDER}</a>.</p><p style="color:#7a6f63;font-size:13px;margin-top:16px;">— Fonkiart</p></div>`,
       });
     } catch(e) { console.warn("Status email:", e); }
   };
@@ -3348,10 +3332,16 @@ function ClientsTab() {
   useEffect(() => { load(); }, []);
   const save = async () => {
     if (!form.name||!form.email) return;
+    const payload = { ...form };
+    if (form.password) {
+      payload.password = await hashPassword(form.password);
+    } else if (editClient) {
+      delete payload.password; // keep existing hash if field left blank while editing
+    }
     if (editClient) {
-      await supabase.from("Clients").update(form).eq("id", editClient.id);
+      await supabase.from("Clients").update(payload).eq("id", editClient.id);
     } else {
-      await supabase.from("Clients").insert([form]);
+      await supabase.from("Clients").insert([payload]);
     }
     setForm(blank); setAdding(false); setEditClient(null); load();
   };
@@ -3363,7 +3353,7 @@ function ClientsTab() {
       setClientOrders(prev => ({...prev, [client.id]: data || []}));
     }
   };
-  const startEdit = (c) => { setEditClient(c); setForm({...blank,...c}); setAdding(true); };
+  const startEdit = (c) => { setEditClient(c); setForm({...blank,...c, password:""}); setAdding(true); };
   const cancelForm = () => { setAdding(false); setEditClient(null); setForm(blank); };
   const deleteClient = async (id) => {
     if (!window.confirm("Delete this client?")) return;
@@ -3396,7 +3386,7 @@ function ClientsTab() {
             <div className="fld"><label>Country</label><input value={form.country||""} onChange={e=>f("country",e.target.value)} placeholder="USA" /></div>
           </div>
           <div className="fld"><label>Notes</label><textarea value={form.notes||""} onChange={e=>f("notes",e.target.value)} placeholder="Any notes about this client…" /></div>
-          <div className="fld"><label>Collectors Password</label><input type="text" value={form.password||""} onChange={e=>f("password",e.target.value)} placeholder="Password for Exclusive Collectors login" /></div>
+          <div className="fld"><label>Collectors Password {editClient ? <span style={{fontWeight:300,textTransform:"none",letterSpacing:0}}>(leave blank to keep existing)</span> : ""}</label><input type="password" value={form.password||""} onChange={e=>f("password",e.target.value)} placeholder={editClient ? "Enter new password to change…" : "Set a password for this client"} autoComplete="new-password" /></div>
           <div style={{display:"flex",gap:10}}>
             <button className="btn-p" onClick={save}>{editClient ? "Update Client" : "Save Client"}</button>
             <button className="btn-s" onClick={cancelForm}>Cancel</button>
@@ -3968,9 +3958,17 @@ function UnifiedLoginModal({ onClose, onAdminLogin, onClientLogin }) {
     try {
       if (supabase) {
         const { data } = await supabase.from("Clients").select("id,name,email,password").eq("email", email.trim().toLowerCase()).maybeSingle();
-        if (data && data.password && data.password === pw) { onClientLogin(data); return; }
+        if (data?.password) {
+          const hashed = await hashPassword(pw);
+          if (data.password === hashed) { onClientLogin(data); return; }
+          // Legacy: plaintext match → auto-upgrade to hash silently
+          if (data.password === pw) {
+            await supabase.from("Clients").update({ password: hashed }).eq("id", data.id);
+            onClientLogin(data); return;
+          }
+        }
       }
-    } catch(e) {}
+    } catch(e) { console.warn("Login:", e); }
     setErr("Incorrect email or password.");
     setLoading(false);
   };
