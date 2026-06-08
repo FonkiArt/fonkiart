@@ -28,7 +28,7 @@ export default function InvoicePage({ token }) {
   }, [token]);
 
   const handleApprove = async () => {
-    if (!supabase || !order) return;
+    if (!supabase || !order || approved) return;
     setApproving(true);
     try {
       await supabase.from("Orders").update({ invoice_approved: true, status: "confirmed" }).eq("id", order.id);

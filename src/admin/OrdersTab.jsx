@@ -20,6 +20,7 @@ export default function OrdersTab() {
   const iv = (k,v) => setInv(x=>({...x,[k]:v}));
   const [invSending, setInvSending] = useState(false);
   const [invSent, setInvSent] = useState("");
+  const showMsg = (msg) => { setInvSent(msg); setTimeout(() => setInvSent(""), 4000); };
   const [resending, setResending] = useState({});
 
   const fmtInvNum = (id) => `INV-${String(id).replace(/-/g,"").slice(0,6).toUpperCase()}`;
@@ -92,8 +93,8 @@ export default function OrdersTab() {
       await sendEmail({ to: email, subject: `Invoice ${fmtInvNum(order.id)} — ${inv.item_title} · Fonkiart`, htmlContent: buildInvoiceEmail(order, link) });
       await load();
       setInv(invBlank); setSendingInvoice(false);
-      setInvSent(`Invoice sent to ${email}`);
-    } catch(e) { console.warn("Send invoice:", e); setInvSent("Error sending invoice. Please try again."); }
+      showMsg(`Invoice sent to ${email}`);
+    } catch(e) { console.warn("Send invoice:", e); showMsg("Error sending invoice. Please try again."); }
     finally { setInvSending(false); }
   };
 
@@ -103,8 +104,8 @@ export default function OrdersTab() {
     try {
       const link = `${window.location.origin}/?invoice=${order.invoice_token}`;
       await sendEmail({ to: order.client_email, subject: `Invoice ${fmtInvNum(order.id)} — ${order.item_title} · Fonkiart`, htmlContent: buildInvoiceEmail(order, link) });
-      setInvSent(`Invoice resent to ${order.client_email}`);
-    } catch(e) { setInvSent("Error resending invoice."); }
+      showMsg(`Invoice resent to ${order.client_email}`);
+    } catch(e) { showMsg("Error resending invoice."); }
     finally { setResending(r => ({...r, [order.id]: false})); }
   };
 
