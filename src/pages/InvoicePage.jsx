@@ -59,12 +59,28 @@ export default function InvoicePage({ token }) {
   const payCashApp  = settings.cashAppHandle;
   const hasAnyPayment = payZelle || payStripe || payVenmo || payCashApp;
   const firstName = order.client_name ? order.client_name.split(" ")[0] : "there";
+  const invNum  = `INV-${String(order.id).replace(/-/g,"").slice(0,6).toUpperCase()}`;
+  const invDate = order.created_at ? new Date(order.created_at).toLocaleDateString("en-US",{year:"numeric",month:"long",day:"numeric"}) : "";
+  const dueDate = order.due_date ? new Date(order.due_date + "T00:00:00").toLocaleDateString("en-US",{year:"numeric",month:"long",day:"numeric"}) : null;
 
   return shell(
     <div className="invoice-card">
       <div className="invoice-header">
         <div className="invoice-logo"><div className="invoice-logo-dot"/>Fonkiart</div>
         <div className="invoice-tagline">Original Art &amp; Fine Art Prints</div>
+      </div>
+
+      <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:20,paddingBottom:16,borderBottom:"1px solid var(--border)"}}>
+        <div>
+          <div style={{fontSize:11,letterSpacing:".14em",textTransform:"uppercase",color:"var(--muted)",marginBottom:3}}>Invoice</div>
+          <div style={{fontFamily:"monospace",fontSize:16,fontWeight:600,color:"var(--ink)",letterSpacing:".06em"}}>{invNum}</div>
+        </div>
+        <div style={{textAlign:"right"}}>
+          {invDate && <div style={{fontSize:12,color:"var(--muted)"}}>Date: {invDate}</div>}
+          <div style={{fontSize:12,color:dueDate?"var(--ink)":"var(--muted)",marginTop:2,fontWeight:dueDate?500:400}}>
+            {dueDate ? `Due: ${dueDate}` : "Payment due upon receipt"}
+          </div>
+        </div>
       </div>
 
       <p style={{fontSize:13,color:"var(--muted)",lineHeight:1.7,marginBottom:24}}>Hi {firstName}, here is your invoice from Fonkiart. Please review the details and click <em>Approve &amp; Pay</em> when you're ready.</p>
