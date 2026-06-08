@@ -47,7 +47,7 @@ export default async function handler(req, res) {
 
   if (error) {
     console.error("catalog-feed:", error);
-    return res.status(500).send("Database error");
+    return res.status(500).send(`Database error: ${error.message || JSON.stringify(error)}`);
   }
 
   const csv = [COLS.join(","), ...artworks.map(row)].join("\n");
