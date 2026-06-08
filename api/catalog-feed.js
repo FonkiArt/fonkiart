@@ -41,8 +41,7 @@ export default async function handler(req, res) {
   const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
   const { data: artworks, error } = await supabase
     .from("Artworks")
-    .select("id,title,description,medium,dimensions,price,salePrice,image,images,isSold,isCollectorsOnly")
-    .eq("isCollectorsOnly", false)
+    .select("*")
     .order("created_at", { ascending: false });
 
   if (error) {
@@ -50,7 +49,8 @@ export default async function handler(req, res) {
     return res.status(500).send(`Database error: ${error.message || JSON.stringify(error)}`);
   }
 
-  const csv = [COLS.join(","), ...artworks.map(row)].join("\n");
+  const filtered = artworks.filter(a => !a.isCollectorsOnly && !a.collectors_only);
+  const csv = [COLS.join(","), ...filtered.map(row)].join("\n");
 
   res.setHeader("Content-Type", "text/csv; charset=utf-8");
   res.setHeader("Cache-Control", "public, max-age=3600");
