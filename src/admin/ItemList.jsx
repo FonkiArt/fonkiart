@@ -51,8 +51,14 @@ export default function ItemList({ data, deleteArtwork, patchArtwork, onEdit }) 
             <div className="ai-title">{item.title}</div>
             <div className="ai-meta">{item.category}{item.price?` · $${item.price}`:""}{item.salePrice?` · SALE $${item.salePrice}`:""}{item.medium?` · ${item.medium}`:""}{item.dimensions?` · ${item.dimensions}`:""}{item.isNew?" · NEW":""}{item.isSold?" · SOLD":""}{item.isChildren?" · ❤️ Children":""}</div>
             {!item.price && !item.isSold && (
-              <div style={{ marginTop:5, display:"inline-flex", alignItems:"center", gap:5, background:"#fff8e1", border:"1px solid #f0c040", borderRadius:3, padding:"3px 8px", fontSize:11, color:"#7a5c00", fontFamily:"'DM Sans',sans-serif" }}>
-                ⚠ No price — excluded from Instagram Shopping feed
+              <div style={{ marginTop:7, background:"#fffbf0", border:"1px solid #e8c840", borderLeft:"3px solid #e8b800", borderRadius:4, padding:"7px 11px", fontFamily:"'DM Sans',sans-serif" }}>
+                <div style={{ display:"flex", alignItems:"center", gap:6, marginBottom:3 }}>
+                  <span style={{ fontSize:13 }}>⚠</span>
+                  <span style={{ fontSize:12, fontWeight:600, color:"#6b4c00", letterSpacing:".02em" }}>Missing Price — Not listed on Instagram Shopping</span>
+                </div>
+                <div style={{ fontSize:11, color:"#8a6a20", lineHeight:1.6 }}>
+                  Meta requires a price for every product in the catalog. Without it, this piece is excluded from the Instagram Shopping feed and cannot be tagged in posts or discovered through the Shop tab. Add a price to make it shoppable.
+                </div>
               </div>
             )}
           </div>
