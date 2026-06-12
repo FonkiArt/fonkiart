@@ -68,6 +68,15 @@ body { font-family:'DM Sans',sans-serif;background:#fff;color:#1c1a18; }
 }
 .topbar-title svg { color:var(--gold); }
 .topbar-right { display:flex;align-items:center;gap:20px; }
+.social-icons { display:flex;align-items:center;gap:10px;padding-right:14px;border-right:1px solid var(--border); }
+.social-icon {
+  display:flex;align-items:center;justify-content:center;
+  width:32px;height:32px;border-radius:50%;
+  color:var(--ink);background:var(--cream);
+  border:1px solid var(--border);
+  transition:color .2s,background .2s,border-color .2s;
+}
+.social-icon:hover { color:#fff;background:var(--gold);border-color:var(--gold); }
 .topbar-tag {
   font-size:11px;letter-spacing:.15em;text-transform:uppercase;
   color:var(--label);background:var(--pink);

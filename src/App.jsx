@@ -235,20 +235,24 @@ export default function App() {
             </div>
           )}
           <div className="topbar-right">
-            {data.settings.instagram && (
-              <a href={data.settings.instagram} target="_blank" rel="noopener noreferrer" style={{ color:"var(--muted)", display:"flex", alignItems:"center", transition:"color .2s" }} onMouseEnter={e=>e.currentTarget.style.color="var(--accent)"} onMouseLeave={e=>e.currentTarget.style.color="var(--muted)"} title="Instagram">
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round"><rect x="2" y="2" width="20" height="20" rx="5" ry="5"/><path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z"/><line x1="17.5" y1="6.5" x2="17.51" y2="6.5"/></svg>
-              </a>
-            )}
-            {data.settings.facebook && (
-              <a href={data.settings.facebook} target="_blank" rel="noopener noreferrer" style={{ color:"var(--muted)", display:"flex", alignItems:"center", transition:"color .2s" }} onMouseEnter={e=>e.currentTarget.style.color="var(--accent)"} onMouseLeave={e=>e.currentTarget.style.color="var(--muted)"} title="Facebook">
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round"><path d="M18 2h-3a5 5 0 0 0-5 5v3H7v4h3v8h4v-8h3l1-4h-4V7a1 1 0 0 1 1-1h3z"/></svg>
-              </a>
-            )}
-            {data.settings.tiktok && (
-              <a href={data.settings.tiktok} target="_blank" rel="noopener noreferrer" style={{ color:"var(--muted)", display:"flex", alignItems:"center", transition:"color .2s" }} onMouseEnter={e=>e.currentTarget.style.color="var(--accent)"} onMouseLeave={e=>e.currentTarget.style.color="var(--muted)"} title="TikTok">
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M19.59 6.69a4.83 4.83 0 01-3.77-4.25V2h-3.45v13.67a2.89 2.89 0 01-2.88 2.5 2.89 2.89 0 01-2.89-2.89 2.89 2.89 0 012.89-2.89c.28 0 .54.04.79.1V9.01a6.33 6.33 0 00-.79-.05 6.34 6.34 0 00-6.34 6.34 6.34 6.34 0 006.34 6.34 6.34 6.34 0 006.33-6.34V8.79a8.18 8.18 0 004.78 1.52V6.84a4.86 4.86 0 01-1.01-.15z"/></svg>
-              </a>
+            {(data.settings.instagram || data.settings.facebook || data.settings.tiktok) && (
+              <div className="social-icons">
+                {data.settings.instagram && (
+                  <a href={data.settings.instagram} target="_blank" rel="noopener noreferrer" className="social-icon" title="Instagram">
+                    <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round"><rect x="2" y="2" width="20" height="20" rx="5" ry="5"/><path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z"/><line x1="17.5" y1="6.5" x2="17.51" y2="6.5"/></svg>
+                  </a>
+                )}
+                {data.settings.facebook && (
+                  <a href={data.settings.facebook} target="_blank" rel="noopener noreferrer" className="social-icon" title="Facebook">
+                    <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round"><path d="M18 2h-3a5 5 0 0 0-5 5v3H7v4h3v8h4v-8h3l1-4h-4V7a1 1 0 0 1 1-1h3z"/></svg>
+                  </a>
+                )}
+                {data.settings.tiktok && (
+                  <a href={data.settings.tiktok} target="_blank" rel="noopener noreferrer" className="social-icon" title="TikTok">
+                    <svg width="19" height="19" viewBox="0 0 24 24" fill="currentColor"><path d="M19.59 6.69a4.83 4.83 0 01-3.77-4.25V2h-3.45v13.67a2.89 2.89 0 01-2.88 2.5 2.89 2.89 0 01-2.89-2.89 2.89 2.89 0 012.89-2.89c.28 0 .54.04.79.1V9.01a6.33 6.33 0 00-.79-.05 6.34 6.34 0 00-6.34 6.34 6.34 6.34 0 006.34 6.34 6.34 6.34 0 006.33-6.34V8.79a8.18 8.18 0 004.78 1.52V6.84a4.86 4.86 0 01-1.01-.15z"/></svg>
+                  </a>
+                )}
+              </div>
             )}
             <button onClick={() => user?.user_metadata?.role === "buyer" ? setPage("buyer-dashboard") : setLoginModal(true)} title="My Account" style={{ background:"none", border:"none", cursor:"pointer", color:"var(--muted)", display:"flex", alignItems:"center", transition:"color .2s", padding:0, position:"relative" }} onMouseEnter={e=>e.currentTarget.style.color="var(--accent)"} onMouseLeave={e=>e.currentTarget.style.color="var(--muted)"}>
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
