@@ -63,6 +63,13 @@ export default function App() {
   const [adminAuthed, setAdminAuthed] = useState(() => localStorage.getItem("fonkiart-admin-authed") === "1");
   const [adminTab, setAdminTabState] = useState(() => localStorage.getItem("fonkiart-admin-tab") || "dashboard");
   const setAdminTab = (t) => { localStorage.setItem("fonkiart-admin-tab", t); setAdminTabState(t); };
+  // "My Account" / mobile account icon — go straight back to admin if already logged in,
+  // without re-prompting for the admin password.
+  const goAccount = () => {
+    if (user?.user_metadata?.role === "buyer") { setPage("buyer-dashboard"); return; }
+    if (localStorage.getItem("fonkiart-admin-authed") === "1") { setPage("admin"); return; }
+    setLoginModal(true);
+  };
   const [collectorsClient, setCollectorsClient] = useState(() => {
     try { return JSON.parse(localStorage.getItem("fonkiart-collectors-client") || "null"); } catch { return null; }
   });
@@ -279,7 +286,7 @@ export default function App() {
             </div>
           )}
           <div className="topbar-right">
-            <button onClick={() => user?.user_metadata?.role === "buyer" ? setPage("buyer-dashboard") : setLoginModal(true)} title="My Account" style={{ background:"none", border:"none", cursor:"pointer", color:"var(--muted)", display:"flex", alignItems:"center", transition:"color .2s", padding:0, position:"relative" }} onMouseEnter={e=>e.currentTarget.style.color="var(--accent)"} onMouseLeave={e=>e.currentTarget.style.color="var(--muted)"}>
+            <button onClick={goAccount} title="My Account" style={{ background:"none", border:"none", cursor:"pointer", color:"var(--muted)", display:"flex", alignItems:"center", transition:"color .2s", padding:0, position:"relative" }} onMouseEnter={e=>e.currentTarget.style.color="var(--accent)"} onMouseLeave={e=>e.currentTarget.style.color="var(--muted)"}>
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
               {user && <span style={{ position:"absolute", bottom:-1, right:-1, width:7, height:7, borderRadius:"50%", background:"#2d6a4f", border:"1px solid #fff" }} />}
             </button>
@@ -309,7 +316,7 @@ export default function App() {
 
         <Footer settings={mergedData.settings} onTrackOrder={() => setTrackModal(true)} />
         <FloatingCart cart={cart} removeFromCart={removeFromCart} settings={mergedData.settings} cartOpen={cartOpen} setCartOpen={setCartOpen} onView={setDeepModal} />
-        <MobileBottomNav page={page} setPage={setPage} cartCount={cart.length} onCart={() => setCartOpen(true)} onAccount={() => user?.user_metadata?.role === "buyer" ? setPage("buyer-dashboard") : setLoginModal(true)} />
+        <MobileBottomNav page={page} setPage={setPage} cartCount={cart.length} onCart={() => setCartOpen(true)} onAccount={goAccount} />
 
         {deepModal && !deepCheckout && !deepPriceInquiry && (
           <ArtworkModal

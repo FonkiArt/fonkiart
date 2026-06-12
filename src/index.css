@@ -399,6 +399,23 @@ body { font-family:'DM Sans',sans-serif;background:#fff;color:#1c1a18; }
 /* ── MOBILE BOTTOM NAV ── */
 .mobile-bottom-nav { display:none;position:fixed;bottom:0;left:0;right:0;background:#fff;border-top:2px solid var(--border);box-shadow:0 -2px 16px rgba(0,0,0,.07);z-index:400;height:60px;align-items:stretch;padding-bottom:env(safe-area-inset-bottom,0px); }
 
+/* ── MARQUEE STRIP ── */
+.marquee-wrap { position:fixed;top:0;left:var(--sidebar);right:0;height:var(--marquee);background:var(--sidebar-bg);z-index:201;overflow:hidden;display:flex;align-items:center;justify-content:space-between; }
+@keyframes marqueeScroll { 0%{transform:translateX(0)} 100%{transform:translateX(-50%)} }
+.marquee-track { display:flex;white-space:nowrap;animation:marqueeScroll 50s linear infinite;will-change:transform; }
+.marquee-item { font-family:'DM Sans',sans-serif;font-size:10px;letter-spacing:.2em;text-transform:uppercase;color:rgba(255,255,255,.9);padding:0 32px; }
+.marquee-sep { color:rgba(255,255,255,.35);margin:0 4px; }
+
+/* Social icons inside the marquee strip — mobile only (desktop shows them in the top bar) */
+.marquee-social { display:none; }
+.marquee-social-icon {
+  display:flex;align-items:center;justify-content:center;
+  width:20px;height:20px;border-radius:50%;
+  color:#fff;background:transparent;border:1px solid rgba(255,255,255,.5);
+  transition:background .2s,border-color .2s;
+}
+.marquee-social-icon:hover { background:rgba(255,255,255,.18);border-color:#fff; }
+
 /* ── MOBILE ── */
 .sidebar-overlay { display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:190; }
 @media(max-width:900px){
@@ -497,23 +514,6 @@ body { font-family:'DM Sans',sans-serif;background:#fff;color:#1c1a18; }
   .checkout { padding:16px 14px; }
   .pay-opts { grid-template-columns:1fr; }
 }
-
-/* ── MARQUEE STRIP ── */
-.marquee-wrap { position:fixed;top:0;left:var(--sidebar);right:0;height:var(--marquee);background:var(--sidebar-bg);z-index:201;overflow:hidden;display:flex;align-items:center;justify-content:space-between; }
-@keyframes marqueeScroll { 0%{transform:translateX(0)} 100%{transform:translateX(-50%)} }
-.marquee-track { display:flex;white-space:nowrap;animation:marqueeScroll 50s linear infinite;will-change:transform; }
-.marquee-item { font-family:'DM Sans',sans-serif;font-size:10px;letter-spacing:.2em;text-transform:uppercase;color:rgba(255,255,255,.9);padding:0 32px; }
-.marquee-sep { color:rgba(255,255,255,.35);margin:0 4px; }
-
-/* Social icons inside the marquee strip — mobile only (desktop shows them in the top bar) */
-.marquee-social { display:none; }
-.marquee-social-icon {
-  display:flex;align-items:center;justify-content:center;
-  width:20px;height:20px;border-radius:50%;
-  color:#fff;background:transparent;border:1px solid rgba(255,255,255,.5);
-  transition:background .2s,border-color .2s;
-}
-.marquee-social-icon:hover { background:rgba(255,255,255,.18);border-color:#fff; }
 
 /* ── FLOATING CART ── */
 .cart-fab-badge { position:absolute;top:-3px;right:-3px;background:#c0392b;color:#fff;width:20px;height:20px;border-radius:50%;font-size:11px;font-weight:700;display:flex;align-items:center;justify-content:center;border:2px solid #fff; }
