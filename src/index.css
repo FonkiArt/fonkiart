@@ -400,13 +400,16 @@ body { font-family:'DM Sans',sans-serif;background:#fff;color:#1c1a18; }
 .mobile-bottom-nav { display:none;position:fixed;bottom:0;left:0;right:0;background:#fff;border-top:2px solid var(--border);box-shadow:0 -2px 16px rgba(0,0,0,.07);z-index:400;height:60px;align-items:stretch;padding-bottom:env(safe-area-inset-bottom,0px); }
 
 /* ── MARQUEE STRIP ── */
-.marquee-wrap { position:fixed;top:0;left:var(--sidebar);right:0;height:var(--marquee);background:var(--sidebar-bg);z-index:201;overflow:hidden;display:flex;align-items:center;justify-content:space-between; }
+.marquee-wrap { position:fixed;top:0;left:var(--sidebar);right:0;height:var(--marquee);background:var(--sidebar-bg);z-index:201;overflow:hidden;display:flex;align-items:center; }
 @keyframes marqueeScroll { 0%{transform:translateX(0)} 100%{transform:translateX(-50%)} }
 .marquee-track { display:flex;white-space:nowrap;animation:marqueeScroll 50s linear infinite;will-change:transform; }
 .marquee-item { font-family:'DM Sans',sans-serif;font-size:10px;letter-spacing:.2em;text-transform:uppercase;color:rgba(255,255,255,.9);padding:0 32px; }
 .marquee-sep { color:rgba(255,255,255,.35);margin:0 4px; }
 
-/* Social icons inside the marquee strip — mobile only (desktop shows them in the top bar) */
+/* Social icons inside the marquee strip — mobile only (desktop shows them in the top bar).
+   The track's content is wider than the screen and never shrinks, so the icons are
+   layered on top as an overlay pinned to the right edge, with a matching background
+   to mask the scrolling text passing underneath. */
 .marquee-social { display:none; }
 .marquee-social-icon {
   display:flex;align-items:center;justify-content:center;
@@ -431,7 +434,13 @@ body { font-family:'DM Sans',sans-serif;background:#fff;color:#1c1a18; }
   .social-icon svg { width:15px;height:15px; }
   .social-icons-desktop { display:none; }
     .topbar-tag { display:none; }
-  .marquee-social { display:flex;align-items:center;gap:6px;padding-right:12px;flex-shrink:0; }
+  .marquee-social {
+    display:flex;align-items:center;gap:6px;
+    position:absolute;top:0;right:0;height:100%;
+    padding-left:16px;padding-right:12px;
+    background:linear-gradient(to right, transparent, var(--sidebar-bg) 24px);
+    z-index:1;
+  }
   .marquee-wrap { padding-right:0; }
   .topbar-title span, .topbar-title { font-size:14px; }
   .content { margin-left:0;padding-bottom:80px;overflow-x:hidden; }
