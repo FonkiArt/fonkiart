@@ -1,13 +1,6 @@
 import { BREVO_API_KEY, BREVO_SENDER } from "../lib/supabase";
 
-export const STORE_KEY      = "fonkiart-v2";
-export const CART_TTL_HOURS = 2;
-
-export const SESSION_ID = (() => {
-  let id = localStorage.getItem("fonkiart-session-id");
-  if (!id) { id = crypto.randomUUID(); localStorage.setItem("fonkiart-session-id", id); }
-  return id;
-})();
+export const STORE_KEY = "fonkiart-v2";
 
 export function generateCouponCode() {
   const chars = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";

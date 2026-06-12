@@ -5,7 +5,7 @@ import {
 } from "lucide-react";
 
 import { supabase, ADMIN_PASSWORD } from "./lib/supabase";
-import { loadData, saveData, SESSION_ID, CART_TTL_HOURS } from "./utils/helpers";
+import { loadData, saveData } from "./utils/helpers";
 import { NAV_ITEMS, DEFAULT_CATEGORIES, DEFAULT_STATE } from "./constants";
 
 import ErrorBoundary from "./components/ErrorBoundary";
@@ -59,27 +59,12 @@ export default function App() {
   const [loginModal, setLoginModal] = useState(false);
   const [adminAuthed, setAdminAuthed] = useState(() => localStorage.getItem("fonkiart-admin-authed") === "1");
   const [collectorsClient, setCollectorsClient] = useState(null);
-  const [cartActivity, setCartActivity] = useState({});
-
-  const loadCartActivity = async () => {
-    if (!supabase) return;
-    try {
-      const cutoff = new Date(Date.now() - CART_TTL_HOURS * 60 * 60 * 1000).toISOString();
-      const { data: rows } = await supabase.from("cart_activity").select("artwork_id").gte("added_at", cutoff);
-      if (!rows) return;
-      const counts = {};
-      rows.forEach(r => { counts[r.artwork_id] = (counts[r.artwork_id] || 0) + 1; });
-      setCartActivity(counts);
-    } catch(e) { /* table may not exist yet */ }
-  };
 
   const addToCart = (item) => {
     setCart(prev => prev.find(i => i.id === item.id) ? prev : [...prev, item]);
-    if (supabase) supabase.from("cart_activity").upsert({ artwork_id: item.id, session_id: SESSION_ID, added_at: new Date().toISOString() }, { onConflict: "artwork_id,session_id" }).then(() => loadCartActivity());
   };
   const removeFromCart = (id) => {
     setCart(prev => prev.filter(i => i.id !== id));
-    if (supabase) supabase.from("cart_activity").delete().match({ artwork_id: id, session_id: SESSION_ID }).then(() => loadCartActivity());
   };
 
   const loadArtworks = async () => {
@@ -128,12 +113,9 @@ export default function App() {
     };
     init();
     loadArtworks();
-    loadCartActivity();
-    const cartPoll = setInterval(loadCartActivity, 60000);
     if (!sessionStorage.getItem("fonkiart-welcome-seen")) {
       setTimeout(() => setShowWelcome(true), 1500);
     }
-    return () => clearInterval(cartPoll);
   }, []);
 
   useEffect(() => { localStorage.setItem("fonkiart-page", page); }, [page]);
@@ -286,13 +268,13 @@ export default function App() {
         <MarqueeStrip />
 
         {page === "home"     && <HomePage setPage={setPage} data={mergedData} />}
-        {page === "catalog"  && <CatalogPage data={mergedData} addToCart={addToCart} cart={cart} cartActivity={cartActivity} />}
+        {page === "catalog"  && <CatalogPage data={mergedData} addToCart={addToCart} cart={cart} />}
         {page === "special"  && <SpecialOrdersPage setPage={setPage} />}
         {page === "auctions" && <AuctionsPage />}
         {page === "partners" && <PartnersPage setPage={setPage} />}
         {page === "contact"  && <ContactPage data={mergedData} />}
-        {page === "new"      && <NewCollectionsPage data={mergedData} addToCart={addToCart} cart={cart} cartActivity={cartActivity} />}
-        {page === "specials" && <SpecialsPage data={mergedData} addToCart={addToCart} cart={cart} cartActivity={cartActivity} />}
+        {page === "new"      && <NewCollectionsPage data={mergedData} addToCart={addToCart} cart={cart} />}
+        {page === "specials" && <SpecialsPage data={mergedData} addToCart={addToCart} cart={cart} />}
         {page === "about"    && <AboutPage />}
         {page === "archive"  && <SoldPage data={mergedData} />}
         {page === "children" && <ChildrenPage setPage={setPage} />}
