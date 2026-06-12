@@ -60,6 +60,8 @@ export default function App() {
   const [trackModal, setTrackModal] = useState(false);
   const [loginModal, setLoginModal] = useState(false);
   const [adminAuthed, setAdminAuthed] = useState(() => localStorage.getItem("fonkiart-admin-authed") === "1");
+  const [adminTab, setAdminTabState] = useState(() => localStorage.getItem("fonkiart-admin-tab") || "dashboard");
+  const setAdminTab = (t) => { localStorage.setItem("fonkiart-admin-tab", t); setAdminTabState(t); };
   const [collectorsClient, setCollectorsClient] = useState(null);
 
   const addToCart = (item) => {
@@ -125,22 +127,25 @@ export default function App() {
   // Browser back/forward support — without this, navigating into a page
   // (e.g. Admin) never adds a history entry, so the back button leaves the
   // site entirely (or does nothing) instead of returning to the prior page.
+  // Admin tab switches (Dashboard/Artworks/Leads/.../Settings) are tracked
+  // too, so Back steps through admin sections before leaving Admin.
   const isFirstRender = useRef(true);
   const fromPopState = useRef(false);
   useEffect(() => {
     if (isFirstRender.current) {
       isFirstRender.current = false;
-      history.replaceState({ page }, "", window.location.href);
+      history.replaceState({ page, adminTab }, "", window.location.href);
       return;
     }
     if (fromPopState.current) { fromPopState.current = false; return; }
-    history.pushState({ page }, "", window.location.href);
-  }, [page]);
+    history.pushState({ page, adminTab }, "", window.location.href);
+  }, [page, adminTab]);
 
   useEffect(() => {
     const onPopState = (e) => {
       fromPopState.current = true;
       setPage(e.state?.page || "home");
+      if (e.state?.adminTab) setAdminTabState(e.state.adminTab);
     };
     window.addEventListener("popstate", onPopState);
     return () => window.removeEventListener("popstate", onPopState);
@@ -212,7 +217,7 @@ export default function App() {
 
   if (page === "collectors-room") return <CollectorsRoomPage user={user} artworks={mergedData?.items ?? []} settings={mergedData?.settings} onLogout={async () => { await supabase.auth.signOut(); setUser(null); setPage("home"); }} onBack={() => setPage("home")} isAdmin={user?.email?.toLowerCase() === "fonkiart@gmail.com"} onAdminEnter={() => setPage("admin")} />;
 
-  if (page === "admin") return <AdminPage data={mergedData} updateData={updateData} addArtwork={addArtwork} editArtwork={editArtwork} deleteArtwork={deleteArtwork} patchArtwork={patchArtwork} loadArtworks={loadArtworks} onBack={() => setPage("home")} autoAuth={adminAuthed} onAutoAuthUsed={() => setAdminAuthed(false)} onViewRoom={() => setPage("collectors-room")} />;
+  if (page === "admin") return <AdminPage data={mergedData} updateData={updateData} addArtwork={addArtwork} editArtwork={editArtwork} deleteArtwork={deleteArtwork} patchArtwork={patchArtwork} loadArtworks={loadArtworks} onBack={() => setPage("home")} autoAuth={adminAuthed} onAutoAuthUsed={() => setAdminAuthed(false)} onViewRoom={() => setPage("collectors-room")} tab={adminTab} setTab={setAdminTab} />;
 
   const currentNav = NAV_ITEMS.find(n => n.id === page) || NAV_ITEMS[0];
 

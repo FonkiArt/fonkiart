@@ -10,9 +10,8 @@ import ItemForm from "./ItemForm";
 import ItemList from "./ItemList";
 import SettingsForm, { SETTINGS_SECTIONS as SETTINGS_FORM_SECTIONS } from "./SettingsForm";
 
-export default function AdminPanel({ data, updateData, addArtwork, editArtwork, deleteArtwork, patchArtwork, loadArtworks, onBack, onLogout, onViewRoom }) {
-  const [tab, setTab] = useState(() => localStorage.getItem("fonkiart-admin-tab") || "dashboard");
-  const setTabAndSave = (t) => { localStorage.setItem("fonkiart-admin-tab", t); setTab(t); };
+export default function AdminPanel({ data, updateData, addArtwork, editArtwork, deleteArtwork, patchArtwork, loadArtworks, onBack, onLogout, onViewRoom, tab, setTab }) {
+  const setTabAndSave = setTab;
   const [editItem, setEditItem] = useState(null);
   const [badges, setBadges] = useState({ orders:0, requests:0 });
   const [settingsHover, setSettingsHover] = useState(false);

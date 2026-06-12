@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { ADMIN_PASSWORD } from "../lib/supabase";
 import AdminPanel from "./AdminPanel";
 
-export default function AdminPage({ data, updateData, addArtwork, editArtwork, deleteArtwork, patchArtwork, loadArtworks, onBack, autoAuth, onAutoAuthUsed, onViewRoom }) {
+export default function AdminPage({ data, updateData, addArtwork, editArtwork, deleteArtwork, patchArtwork, loadArtworks, onBack, autoAuth, onAutoAuthUsed, onViewRoom, tab, setTab }) {
   const [authed, setAuthed] = useState(() => autoAuth || localStorage.getItem("fonkiart-admin-authed") === "1");
   const [pw, setPw] = useState("");
   const [err, setErr] = useState("");
@@ -43,6 +43,6 @@ export default function AdminPage({ data, updateData, addArtwork, editArtwork, d
     </div>
   );
 
-  return <AdminPanel data={data} updateData={updateData} addArtwork={addArtwork} editArtwork={editArtwork} deleteArtwork={deleteArtwork} patchArtwork={patchArtwork} loadArtworks={loadArtworks} onBack={onBack} onViewRoom={onViewRoom}
-    onLogout={() => { localStorage.removeItem("fonkiart-admin-authed"); localStorage.removeItem("fonkiart-admin-tab"); localStorage.setItem("fonkiart-page","home"); setAuthed(false); setPw(""); onBack(); }} />;
+  return <AdminPanel data={data} updateData={updateData} addArtwork={addArtwork} editArtwork={editArtwork} deleteArtwork={deleteArtwork} patchArtwork={patchArtwork} loadArtworks={loadArtworks} onBack={onBack} onViewRoom={onViewRoom} tab={tab} setTab={setTab}
+    onLogout={() => { localStorage.removeItem("fonkiart-admin-authed"); localStorage.removeItem("fonkiart-admin-tab"); localStorage.setItem("fonkiart-page","home"); setTab("dashboard"); setAuthed(false); setPw(""); onBack(); }} />;
 }
