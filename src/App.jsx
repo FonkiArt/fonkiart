@@ -94,9 +94,8 @@ export default function App() {
     const { navVisible, ...supabaseSettings } = settings;
     if (navVisible !== undefined) localStorage.setItem("fonkiart-nav-visible", JSON.stringify(navVisible));
     if (!supabase) return;
-    try {
-      await supabase.from("Settings").upsert({ id: 1, ...supabaseSettings, categories }, { onConflict: "id" });
-    } catch(e) { console.error("Settings save:", e); }
+    const { error } = await supabase.from("Settings").upsert({ id: 1, ...supabaseSettings, categories }, { onConflict: "id" });
+    if (error) { console.error("Settings save:", error); throw error; }
   };
 
   useEffect(() => {

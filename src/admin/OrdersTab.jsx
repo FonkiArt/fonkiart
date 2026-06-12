@@ -71,16 +71,20 @@ export default function OrdersTab() {
   const sendInvoice = async () => {
     const email = inv.clientMode === "new" ? inv.newEmail : inv.client_email;
     const name  = inv.clientMode === "new" ? `${inv.newFirst} ${inv.newLast}`.trim() : (clients.find(c=>c.email===inv.client_email)?.name || "");
-    if (!email || !inv.item_title || !inv.amount) return;
+    if (!email || !inv.item_title || !inv.amount) {
+      showMsg("Please select a client and fill in Artwork/Item and Amount.");
+      return;
+    }
     setInvSending(true); setInvSent("");
     try {
       if (inv.clientMode === "new" && inv.newFirst && inv.newEmail) {
-        await supabase.from("Clients").insert([{ name, email:inv.newEmail, phone:inv.newPhone }]);
+        const { error: clientErr } = await supabase.from("Clients").insert([{ name, email:inv.newEmail, phone:inv.newPhone }]);
+        if (clientErr) throw clientErr;
       }
       const token = crypto.randomUUID();
       const link = `${window.location.origin}/?invoice=${token}`;
       const methods = ["zelle","venmo","cashapp","stripe"].filter(m => inv[`pay_${m}`]).join(",");
-      const { data: orderData } = await supabase.from("Orders").insert([{
+      const { data: orderData, error: orderErr } = await supabase.from("Orders").insert([{
         client_email: email, client_name: name,
         item_title: inv.item_title, amount: Number(inv.amount),
         notes: inv.notes, due_date: inv.due_date || null,
@@ -89,6 +93,7 @@ export default function OrdersTab() {
         stripe_link: inv.pay_stripe ? inv.stripe_link : null,
         payment_methods: methods,
       }]).select().single();
+      if (orderErr) throw orderErr;
       const order = { ...orderData, client_name: name, created_at: new Date().toISOString() };
       await sendEmail({ to: email, subject: `Invoice ${fmtInvNum(order.id)} — ${inv.item_title} · Fonkiart`, htmlContent: buildInvoiceEmail(order, link) });
       await load();

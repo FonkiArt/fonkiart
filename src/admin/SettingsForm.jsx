@@ -6,19 +6,28 @@ export default function SettingsForm({ data, updateData }) {
   const [cats, setCats] = useState([...data.categories]);
   const [newCat, setNewCat] = useState("");
   const [ok, setOk] = useState(false);
+  const [err, setErr] = useState("");
   const [navVis, setNavVis] = useState({ ...(data.settings.navVisible || {}) });
 
   const toggleNav = (id) => setNavVis(prev => ({ ...prev, [id]: prev[id] === false ? true : false }));
 
   const save = async () => {
-    await updateData({ settings: { ...s, navVisible: navVis }, categories: cats });
-    setOk(true); setTimeout(() => setOk(false), 3000);
+    setErr("");
+    try {
+      await updateData({ settings: { ...s, navVisible: navVis }, categories: cats });
+      setOk(true); setTimeout(() => setOk(false), 3000);
+    } catch (e) {
+      console.error("Settings save:", e);
+      setErr("Error saving settings. Please try again.");
+      setTimeout(() => setErr(""), 5000);
+    }
   };
 
   return (
     <div>
       <h2>Settings</h2>
       {ok && <div className="ok-msg">✓ Settings saved.</div>}
+      {err && <div className="err" style={{marginBottom:12}}>{err}</div>}
       <div className="settings-box">
         <h3>💚 Zelle</h3>
         <div className="fld"><label>Zelle Email or Phone</label><input value={s.zelleContact} onChange={e=>setS({...s,zelleContact:e.target.value})} /></div>

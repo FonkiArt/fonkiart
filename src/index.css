@@ -279,6 +279,35 @@ body { font-family:'DM Sans',sans-serif;background:#fff;color:#1c1a18; }
 .crm-title { font-family:'Cormorant Garamond',serif;font-size:22px;font-weight:300; }
 .crm-tabs { padding:0 36px;border-bottom:1px solid var(--border);background:#fff;display:flex;overflow:visible; }
 
+/* ── ADMIN FONT SIZE BUMP (+2px, admin-only) ── */
+.admin-wrap .nav-item-admin { font-size:14px; }
+.admin-wrap .admin-top-title { font-size:20px; }
+.admin-wrap .admin-side h2,
+.admin-wrap .admin-main h2 { font-size:21px; }
+.admin-wrap .fld label { font-size:13px; }
+.admin-wrap .fld input,
+.admin-wrap .fld textarea,
+.admin-wrap .fld select { font-size:16px; }
+.admin-wrap .img-drop { font-size:15px; }
+.admin-wrap .btn-p,
+.admin-wrap .btn-s { font-size:14px; }
+.admin-wrap .btn-d { font-size:13px; }
+.admin-wrap .ok-msg,
+.admin-wrap .warn-msg,
+.admin-wrap .err { font-size:15px; }
+.admin-wrap .ai-title { font-size:16px; }
+.admin-wrap .ai-meta { font-size:14px; }
+.admin-wrap .settings-box h3 { font-size:14px; }
+.admin-wrap .cat-chip { font-size:15px; }
+.admin-wrap .cat-chip-del { font-size:19px; }
+.admin-wrap .admin-tab { font-size:14px; }
+.admin-wrap .crm-table th { font-size:13px; }
+.admin-wrap .crm-table td { font-size:15px; }
+.admin-wrap .crm-search { font-size:15px; }
+.admin-wrap .crm-empty { font-size:16px; }
+.admin-wrap .crm-add-form h3 { font-size:20px; }
+.admin-wrap .crm-title { font-size:24px; }
+
 /* ── CONTACT FORM ── */
 .contact-grid { display:grid;grid-template-columns:1fr 1fr;gap:48px;padding:48px; }
 .contact-info h2 { font-family:'Cormorant Garamond',serif;font-size:28px;font-weight:300;margin-bottom:16px; }
