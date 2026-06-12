@@ -13,7 +13,8 @@ export async function hashPassword(pw) {
   return Array.from(new Uint8Array(buf)).map(b => b.toString(16).padStart(2, "0")).join("");
 }
 
-// Sends email via serverless proxy in production; falls back to direct Brevo in local dev.
+// Sends email via direct Brevo call when a browser-side API key is available (local dev);
+// otherwise falls back to the serverless proxy (production).
 // In production (fonkiart.com / Vercel), VITE_BREVO_API_KEY is intentionally NOT set —
 // only the server-side BREVO_API_KEY is set, keeping the key out of the browser bundle.
 export async function sendEmail({ to, subject, htmlContent, replyTo } = {}) {
@@ -21,14 +22,16 @@ export async function sendEmail({ to, subject, htmlContent, replyTo } = {}) {
   const payload = { sender: { name: "Fonkiart", email: BREVO_SENDER }, to: toArr, subject, htmlContent };
   if (replyTo) payload.replyTo = { email: replyTo };
 
-  const isLocal = window.location.hostname === "localhost" || window.location.hostname.startsWith("192.168.");
-  if (isLocal && BREVO_API_KEY) {
+  if (BREVO_API_KEY) {
     const r = await fetch("https://api.brevo.com/v3/smtp/email", {
       method: "POST",
       headers: { accept: "application/json", "api-key": BREVO_API_KEY, "content-type": "application/json" },
       body: JSON.stringify(payload),
     });
-    if (!r.ok) throw new Error(`Brevo ${r.status}`);
+    if (!r.ok) {
+      const text = await r.text().catch(() => "");
+      throw new Error(`Brevo ${r.status}${text ? `: ${text}` : ""}`);
+    }
     return;
   }
 
@@ -37,7 +40,10 @@ export async function sendEmail({ to, subject, htmlContent, replyTo } = {}) {
     headers: { "content-type": "application/json" },
     body: JSON.stringify(payload),
   });
-  if (!r.ok) throw new Error(`Email API ${r.status}`);
+  if (!r.ok) {
+    const text = await r.text().catch(() => "");
+    throw new Error(`Email API ${r.status}${text ? `: ${text}` : ""}`);
+  }
 }
 
 const _urgencyCache = new Map();
