@@ -10,14 +10,22 @@ export default function AdminPage({ data, updateData, addArtwork, editArtwork, d
 
   const doAuth = () => { localStorage.setItem("fonkiart-admin-authed", "1"); setAuthed(true); };
 
+  // If we got here via the auto-login shortcut, persist the session to
+  // localStorage right away — otherwise it's only remembered in memory
+  // for this visit, and "Back to Site" loses it (login prompt reappears).
+  useEffect(() => {
+    if (autoAuth) {
+      localStorage.setItem("fonkiart-admin-authed", "1");
+      if (onAutoAuthUsed) onAutoAuthUsed();
+    }
+  }, []);
+
   useEffect(() => {
     if (authed) return;
     if (countdown <= 0) { onBack(); return; }
     const t = setTimeout(() => setCountdown(c => c - 1), 1000);
     return () => clearTimeout(t);
   }, [authed, countdown]);
-
-  if (autoAuth && !authed) { doAuth(); if (onAutoAuthUsed) onAutoAuthUsed(); }
 
   if (!authed) return (
     <div className="login-wrap">
