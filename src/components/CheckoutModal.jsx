@@ -1,8 +1,8 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { supabase, BREVO_SENDER } from "../lib/supabase";
-import { sendEmail } from "../utils/helpers";
+import { sendEmail, formatOrderRef } from "../utils/helpers";
 
-export default function CheckoutModal({ items, settings, onClose }) {
+export default function CheckoutModal({ items, settings, onClose, onSuccess }) {
   const venmoHandle   = settings.venmoHandle   || "@fonkiart";
   const cashAppHandle = settings.cashAppHandle || "$fonkiart";
   const [method, setMethod] = useState(null);
@@ -15,7 +15,17 @@ export default function CheckoutModal({ items, settings, onClose }) {
   const [couponStatus, setCouponStatus] = useState(null);
   const [couponData, setCouponData] = useState(null);
   const [checkoutError, setCheckoutError] = useState("");
-  const [orderRef] = useState(() => `FK-${Math.random().toString(36).slice(2,10).toUpperCase()}`);
+  const [orderRef, setOrderRef] = useState("");
+
+  // Predict the next sequential order number (Orders.id is auto-incrementing).
+  useEffect(() => {
+    if (!supabase) return;
+    supabase.from("Orders").select("id").order("id", { ascending:false }).limit(1).then(({ data }) => {
+      const maxId = data && data.length ? data[0].id : 9;
+      setOrderRef(formatOrderRef(maxId + 1));
+    });
+  }, []);
+
   const cv = (k,v) => setCustomer(fm=>({...fm,[k]:v}));
   const fullName = `${customer.firstName} ${customer.lastName}`.trim();
   const discount = settings.couponDiscount ?? 15;
@@ -72,13 +82,14 @@ export default function CheckoutModal({ items, settings, onClose }) {
   };
 
   // markSold intentionally removed — Andy marks sold manually in Admin after verifying payment received
-  const handleConfirmZelle   = async () => { setSaving(true); await saveOrder(); setSaving(false); setDone(true); };
-  const handleConfirmVenmo   = async () => { setSaving(true); await saveOrder(); setSaving(false); setDone(true); };
-  const handleConfirmCashApp = async () => { setSaving(true); await saveOrder(); setSaving(false); setDone(true); };
+  const finish = () => { setDone(true); onSuccess?.(); };
+  const handleConfirmZelle   = async () => { setSaving(true); await saveOrder(); setSaving(false); finish(); };
+  const handleConfirmVenmo   = async () => { setSaving(true); await saveOrder(); setSaving(false); finish(); };
+  const handleConfirmCashApp = async () => { setSaving(true); await saveOrder(); setSaving(false); finish(); };
   const handleCard = async () => {
     setSaving(true); await saveOrder(); setSaving(false);
     const link = (items.length === 1 && items[0].stripeLink) || settings.stripeLink;
-    if (link) { window.open(link, "_blank"); setDone(true); }
+    if (link) { window.open(link, "_blank"); finish(); }
     else alert("Card payment is being set up. Please use Zelle or contact Fonkiart directly.");
   };
 

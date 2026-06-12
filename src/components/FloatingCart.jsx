@@ -61,7 +61,7 @@ export default function FloatingCart({ cart, removeFromCart, settings, cartOpen,
               </div>
             )}
           </div>
-          {checkout && <CheckoutModal items={checkout} settings={settings} onClose={() => setCheckout(null)} />}
+          {checkout && <CheckoutModal items={checkout} settings={settings} onClose={() => setCheckout(null)} onSuccess={() => checkout.forEach(i => removeFromCart(i.id))} />}
         </>
       )}
     </>

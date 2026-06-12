@@ -13,6 +13,11 @@ export async function hashPassword(pw) {
   return Array.from(new Uint8Array(buf)).map(b => b.toString(16).padStart(2, "0")).join("");
 }
 
+// Sequential order numbers: Orders.id is an auto-incrementing integer.
+// Offset chosen so the next order (id = current max + 1) is FA-1720, then +1 each order.
+export const ORDER_REF_OFFSET = 1710;
+export const formatOrderRef = (id) => `FA-${Number(id) + ORDER_REF_OFFSET}`;
+
 // Sends email via direct Brevo call when a browser-side API key is available (local dev);
 // otherwise falls back to the serverless proxy (production).
 // In production (fonkiart.com / Vercel), VITE_BREVO_API_KEY is intentionally NOT set —
