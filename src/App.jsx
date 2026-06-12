@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import {
   Home, LayoutGrid, Star, Timer, Handshake, Mail,
   Info, Heart, Settings, ChevronRight, X, Menu, Sparkles, Tag, Archive, Package, LogIn, KeyRound
@@ -119,6 +119,30 @@ export default function App() {
 
   useEffect(() => { localStorage.setItem("fonkiart-page", page); }, [page]);
 
+  // Browser back/forward support — without this, navigating into a page
+  // (e.g. Admin) never adds a history entry, so the back button leaves the
+  // site entirely (or does nothing) instead of returning to the prior page.
+  const isFirstRender = useRef(true);
+  const fromPopState = useRef(false);
+  useEffect(() => {
+    if (isFirstRender.current) {
+      isFirstRender.current = false;
+      history.replaceState({ page }, "", window.location.href);
+      return;
+    }
+    if (fromPopState.current) { fromPopState.current = false; return; }
+    history.pushState({ page }, "", window.location.href);
+  }, [page]);
+
+  useEffect(() => {
+    const onPopState = (e) => {
+      fromPopState.current = true;
+      setPage(e.state?.page || "home");
+    };
+    window.addEventListener("popstate", onPopState);
+    return () => window.removeEventListener("popstate", onPopState);
+  }, []);
+
   useEffect(() => {
     if (!supabase) return;
     supabase.auth.getSession().then(({ data: { session } }) => {
@@ -225,16 +249,6 @@ export default function App() {
         <div className="topbar">
           <div style={{ display:"flex", alignItems:"center", gap:14 }}>
             <button className="hamburger" onClick={() => setSidebarOpen(o => !o)}><Menu size={20} /></button>
-            {page !== "home" && (
-              <div className="topbar-title"><currentNav.Icon size={16} />{currentNav.label}</div>
-            )}
-          </div>
-          {page === "home" && (
-            <div style={{ position:"absolute", left:"50%", transform:"translateX(-50%)", fontFamily:"'Cormorant Garamond',serif", fontSize:20, fontWeight:600, letterSpacing:".14em", textTransform:"uppercase", color:"var(--ink)", display:"flex", alignItems:"center", gap:8, pointerEvents:"none" }}>
-              <div style={{ width:5, height:5, borderRadius:"50%", background:"var(--gold)", flexShrink:0 }} />Fonkiart
-            </div>
-          )}
-          <div className="topbar-right">
             {(data.settings.instagram || data.settings.facebook || data.settings.tiktok) && (
               <div className="social-icons">
                 {data.settings.instagram && (
@@ -254,6 +268,16 @@ export default function App() {
                 )}
               </div>
             )}
+            {page !== "home" && (
+              <div className="topbar-title"><currentNav.Icon size={16} />{currentNav.label}</div>
+            )}
+          </div>
+          {page === "home" && (
+            <div style={{ position:"absolute", left:"50%", transform:"translateX(-50%)", fontFamily:"'Cormorant Garamond',serif", fontSize:20, fontWeight:600, letterSpacing:".14em", textTransform:"uppercase", color:"var(--ink)", display:"flex", alignItems:"center", gap:8, pointerEvents:"none" }}>
+              <div style={{ width:5, height:5, borderRadius:"50%", background:"var(--gold)", flexShrink:0 }} />Fonkiart
+            </div>
+          )}
+          <div className="topbar-right">
             <button onClick={() => user?.user_metadata?.role === "buyer" ? setPage("buyer-dashboard") : setLoginModal(true)} title="My Account" style={{ background:"none", border:"none", cursor:"pointer", color:"var(--muted)", display:"flex", alignItems:"center", transition:"color .2s", padding:0, position:"relative" }} onMouseEnter={e=>e.currentTarget.style.color="var(--accent)"} onMouseLeave={e=>e.currentTarget.style.color="var(--muted)"}>
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
               {user && <span style={{ position:"absolute", bottom:-1, right:-1, width:7, height:7, borderRadius:"50%", background:"#2d6a4f", border:"1px solid #fff" }} />}
@@ -267,7 +291,7 @@ export default function App() {
         {authModal && <AuthModal user={user} onClose={() => setAuthModal(false)} artworks={mergedData.items} />}
         {trackModal && <TrackOrderModal onClose={() => setTrackModal(false)} />}
         {loginModal && <BuyerAuthModal onClose={() => setLoginModal(false)} onAdminLogin={() => { setAdminAuthed(true); setPage("admin"); setLoginModal(false); setSidebarOpen(false); }} onClientLogin={(client) => { setCollectorsClient(client); setPage("collectors"); setLoginModal(false); setSidebarOpen(false); }} />}
-        <CookieBanner />
+        <CookieBanner onContact={() => setPage("contact")} />
         <MarqueeStrip />
 
         {page === "home"     && <HomePage setPage={setPage} data={mergedData} />}

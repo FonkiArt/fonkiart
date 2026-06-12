@@ -8,7 +8,7 @@ import RequestsTab from "./RequestsTab";
 import ClientsTab from "./ClientsTab";
 import ItemForm from "./ItemForm";
 import ItemList from "./ItemList";
-import SettingsForm from "./SettingsForm";
+import SettingsForm, { SETTINGS_SECTIONS as SETTINGS_FORM_SECTIONS } from "./SettingsForm";
 
 export default function AdminPanel({ data, updateData, addArtwork, editArtwork, deleteArtwork, patchArtwork, loadArtworks, onBack, onLogout, onViewRoom }) {
   const [tab, setTab] = useState(() => localStorage.getItem("fonkiart-admin-tab") || "dashboard");
@@ -18,11 +18,7 @@ export default function AdminPanel({ data, updateData, addArtwork, editArtwork, 
   const [settingsHover, setSettingsHover] = useState(false);
   const [settingsJumpTo, setSettingsJumpTo] = useState(null);
   const isCRM = ["dashboard","leads","orders","requests","clients"].includes(tab);
-  const SETTINGS_SECTIONS = [
-    ["zelle","💚 Zelle"],["coupon","🎟 Coupon Discount"],["stripe","💳 Stripe"],
-    ["social","📱 Social Media"],["cats","🗂 Categories"],["nav","🔗 Navigation Links"],
-    ["tasks","✅ Pending Tasks"],
-  ];
+  const SETTINGS_SECTIONS = [...SETTINGS_FORM_SECTIONS, ["tasks","✅ Pending Tasks"]];
 
   useEffect(() => {
     if (!supabase) return;
@@ -85,7 +81,7 @@ export default function AdminPanel({ data, updateData, addArtwork, editArtwork, 
           <div className="admin-side">
             {tab==="items"
               ? <ItemForm data={data} updateData={updateData} addArtwork={addArtwork} editArtwork={editArtwork} editItem={editItem} setEditItem={setEditItem} />
-              : <SettingsForm data={data} updateData={updateData} patchArtwork={patchArtwork} loadArtworks={loadArtworks} />}
+              : <SettingsForm data={data} updateData={updateData} patchArtwork={patchArtwork} loadArtworks={loadArtworks} jumpTo={settingsJumpTo} onJumpHandled={() => setSettingsJumpTo(null)} />}
           </div>
           <div className="admin-main">
             <h2>

@@ -68,7 +68,7 @@ body { font-family:'DM Sans',sans-serif;background:#fff;color:#1c1a18; }
 }
 .topbar-title svg { color:var(--gold); }
 .topbar-right { display:flex;align-items:center;gap:20px; }
-.social-icons { display:flex;align-items:center;gap:10px;padding-right:14px;border-right:1px solid var(--border); }
+.social-icons { display:flex;align-items:center;gap:8px;padding-left:14px;border-left:1px solid var(--border); }
 .social-icon {
   display:flex;align-items:center;justify-content:center;
   width:32px;height:32px;border-radius:50%;
@@ -370,6 +370,10 @@ body { font-family:'DM Sans',sans-serif;background:#fff;color:#1c1a18; }
   .topbar { left:0;padding:0 16px; }
   .topbar-right a { display:none; }
   .topbar-right { gap:10px; }
+  .social-icons { gap:5px;padding-left:8px; }
+  .social-icon { width:26px;height:26px; }
+  .social-icon svg { width:15px;height:15px; }
+  .topbar-title span, .topbar-title { font-size:14px; }
   .content { margin-left:0;padding-bottom:80px;overflow-x:hidden; }
   .hamburger { display:flex; }
   .marquee-wrap { left:0; }

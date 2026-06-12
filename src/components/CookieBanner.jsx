@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 
-export default function CookieBanner() {
+export default function CookieBanner({ onContact }) {
   const [visible, setVisible] = useState(false);
   useEffect(() => {
     if (!localStorage.getItem("fonkiart-cookie-ok")) setVisible(true);
@@ -9,9 +9,9 @@ export default function CookieBanner() {
   return (
     <div className="cookie-banner">
       <p>
-        Fonkiart uses cookies to remember your preferences and may collect your email to send exclusive offers and order updates.
+        Fonkiart uses cookies to remember your preferences and taste.
         By continuing to browse, you agree to this.{" "}
-        <a href="mailto:support@fonkiart.com">Questions? Contact us.</a>
+        <a href="#" onClick={e => { e.preventDefault(); onContact?.(); }}>Questions? Contact Us Here!</a>
       </p>
       <button
         className="btn-p"
