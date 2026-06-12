@@ -50,7 +50,7 @@ export default function SpecialsPage({ data, addToCart, cart }) {
         }
       </div>
       {selected && <ArtworkModal item={selected} onClose={() => setSelected(null)} sold={!!selected.isSold} onBuy={selected.isSold ? undefined : s => { setSelected(null); setCheckout(s); }} />}
-      {checkout && <CheckoutModal item={checkout} settings={data.settings} onClose={() => setCheckout(null)} />}
+      {checkout && <CheckoutModal items={[checkout]} settings={data.settings} onClose={() => setCheckout(null)} />}
     </div>
   );
 }

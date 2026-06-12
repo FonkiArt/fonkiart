@@ -54,7 +54,7 @@ export default function NewCollectionsPage({ data, addToCart, cart }) {
         }
       </div>
       {selected && <ArtworkModal item={selected} onClose={() => setSelected(null)} sold={!!selected.isSold} onBuy={selected.isSold ? undefined : s => { setSelected(null); s.price||s.salePrice ? setCheckout(s) : setPriceInquiry(s); }} />}
-      {checkout && <CheckoutModal item={checkout} settings={data.settings} onClose={() => setCheckout(null)} />}
+      {checkout && <CheckoutModal items={[checkout]} settings={data.settings} onClose={() => setCheckout(null)} />}
       {priceInquiry && <PriceInquiryModal item={priceInquiry} onClose={() => setPriceInquiry(null)} />}
     </div>
   );

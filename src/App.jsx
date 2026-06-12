@@ -334,7 +334,7 @@ export default function App() {
           />
         )}
         {deepCheckout && (
-          <CheckoutModal item={deepCheckout} onClose={() => setDeepCheckout(null)} settings={mergedData.settings} />
+          <CheckoutModal items={[deepCheckout]} onClose={() => setDeepCheckout(null)} settings={mergedData.settings} />
         )}
         {deepPriceInquiry && (
           <PriceInquiryModal item={deepPriceInquiry} onClose={() => setDeepPriceInquiry(null)} />

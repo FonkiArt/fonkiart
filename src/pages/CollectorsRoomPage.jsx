@@ -195,7 +195,7 @@ export default function CollectorsRoomPage({ user, artworks, settings, onLogout,
           </div>
         </div>
       )}
-      {checkout && <CheckoutModal item={checkout} settings={settings} onClose={() => setCheckout(null)} />}
+      {checkout && <CheckoutModal items={[checkout]} settings={settings} onClose={() => setCheckout(null)} />}
     </div>
   );
 }
