@@ -1,7 +1,7 @@
 import { useState } from "react";
 import CheckoutModal from "./CheckoutModal";
 
-export default function FloatingCart({ cart, removeFromCart, settings, cartOpen, setCartOpen }) {
+export default function FloatingCart({ cart, removeFromCart, settings, cartOpen, setCartOpen, onView }) {
   const [checkout, setCheckout] = useState(null);
   return (
     <>
@@ -26,9 +26,9 @@ export default function FloatingCart({ cart, removeFromCart, settings, cartOpen,
                 </div>
               ) : cart.map(item => (
                 <div key={item.id} className="cart-drawer-item">
-                  <img src={item.image} alt={item.title} />
+                  <img src={item.image} alt={item.title} style={{ cursor: onView ? "pointer" : "default" }} onClick={() => onView && onView(item)} />
                   <div>
-                    <div className="cart-drawer-title">{item.title}</div>
+                    <div className="cart-drawer-title" style={{ cursor: onView ? "pointer" : "default" }} onClick={() => onView && onView(item)}>{item.title}</div>
                     <div className="cart-drawer-price">
                       {item.salePrice ? `$${Number(item.salePrice).toLocaleString()}` : item.price ? `$${Number(item.price).toLocaleString()}` : "Price on request"}
                     </div>

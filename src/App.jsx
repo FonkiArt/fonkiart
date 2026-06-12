@@ -283,7 +283,7 @@ export default function App() {
         {page === "children" && <ChildrenPage setPage={setPage} />}
 
         <Footer settings={mergedData.settings} onTrackOrder={() => setTrackModal(true)} />
-        <FloatingCart cart={cart} removeFromCart={removeFromCart} settings={mergedData.settings} cartOpen={cartOpen} setCartOpen={setCartOpen} />
+        <FloatingCart cart={cart} removeFromCart={removeFromCart} settings={mergedData.settings} cartOpen={cartOpen} setCartOpen={setCartOpen} onView={setDeepModal} />
         <MobileBottomNav page={page} setPage={setPage} cartCount={cart.length} onCart={() => setCartOpen(true)} onAccount={() => user?.user_metadata?.role === "buyer" ? setPage("buyer-dashboard") : setLoginModal(true)} />
 
         {deepModal && !deepCheckout && !deepPriceInquiry && (

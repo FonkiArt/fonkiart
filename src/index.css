@@ -175,7 +175,7 @@ body { font-family:'DM Sans',sans-serif;background:#fff;color:#1c1a18; }
 .card-badge-new  { background:var(--sidebar-bg);color:#fff; }
 
 /* ── MODALS ── */
-.modal-bg { position:fixed;inset:0;z-index:300;background:rgba(10,8,6,.88);backdrop-filter:blur(6px);display:flex;align-items:center;justify-content:center;padding:24px;animation:fi .2s ease; }
+.modal-bg { position:fixed;inset:0;z-index:700;background:rgba(10,8,6,.88);backdrop-filter:blur(6px);display:flex;align-items:center;justify-content:center;padding:24px;animation:fi .2s ease; }
 @keyframes fi { from{opacity:0}to{opacity:1} }
 .modal { background:var(--cream);max-width:900px;width:100%;display:grid;grid-template-columns:1.1fr 1fr;max-height:92vh;overflow:hidden;animation:su .3s cubic-bezier(.25,.46,.45,.94); }
 @keyframes su { from{transform:translateY(20px);opacity:0}to{transform:translateY(0);opacity:1} }
