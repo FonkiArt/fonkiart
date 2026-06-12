@@ -9,21 +9,30 @@ export default function CheckoutModal({ items, settings, onClose }) {
   const [step, setStep] = useState(1);
   const [done, setDone] = useState(false);
   const [saving, setSaving] = useState(false);
-  const blank = { name:"", email:"", phone:"", address:"", city:"", state:"", zip:"", country:"" };
+  const blank = { firstName:"", lastName:"", email:"", phone:"", address:"", city:"", state:"", zip:"", country:"" };
   const [customer, setCustomer] = useState(blank);
   const [couponCode, setCouponCode] = useState("");
   const [couponStatus, setCouponStatus] = useState(null);
   const [couponData, setCouponData] = useState(null);
-  const [orderRef, setOrderRef] = useState("");
+  const [checkoutError, setCheckoutError] = useState("");
+  const [orderRef] = useState(() => `FK-${Math.random().toString(36).slice(2,10).toUpperCase()}`);
   const cv = (k,v) => setCustomer(fm=>({...fm,[k]:v}));
+  const fullName = `${customer.firstName} ${customer.lastName}`.trim();
   const discount = settings.couponDiscount ?? 15;
   const itemPrice = (i) => Number(i.salePrice || i.price || 0);
   const itemEffective = (i) => couponStatus === "valid" ? Math.round(itemPrice(i) * (1 - discount / 100)) : itemPrice(i);
   const basePrice = items.reduce((sum,i) => sum + itemPrice(i), 0);
   const effectivePrice = couponStatus === "valid" ? Math.round(basePrice * (1 - discount / 100)) : basePrice;
   const itemsLabel = items.length === 1 ? items[0].title : `${items.length} items`;
-  const memoLabel = items.map(i => i.title).join(", ");
-  const canNext = method && customer.name.trim() && customer.email.includes("@");
+  const canNext = method && fullName && customer.email.includes("@");
+
+  const handleContinue = () => {
+    if (!method) { setCheckoutError("Please select a payment method."); return; }
+    if (!fullName) { setCheckoutError("Please enter your first and last name."); return; }
+    if (!customer.email.includes("@")) { setCheckoutError("Please enter a valid email address."); return; }
+    setCheckoutError("");
+    setStep(2);
+  };
 
   const applyCoupon = async () => {
     const code = couponCode.trim().toUpperCase();
@@ -41,24 +50,23 @@ export default function CheckoutModal({ items, settings, onClose }) {
     if (!supabase) return;
     const addr = [customer.address, customer.city, customer.state, customer.zip, customer.country].filter(Boolean).join(", ");
     const discountNote = couponStatus === "valid" ? ` · ${discount}% coupon applied` : "";
-    const notes = [customer.name, customer.phone, addr].filter(Boolean).join(" · ") + discountNote;
+    const notes = [`Order Ref: ${orderRef}`, fullName, customer.phone, addr].filter(Boolean).join(" · ") + discountNote;
     const sendMail = async (to, subject, html) => { try { await sendEmail({ to, subject, htmlContent: html }); } catch(e) { console.warn("Email:", e); } };
     const priceStr = effectivePrice ? `$${Number(effectivePrice).toLocaleString()}` : "";
+    const ref = orderRef;
     const { data: existingClient } = await supabase.from("Clients").select("id").eq("email", customer.email).maybeSingle();
     const rows = items.map(i => ({ client_email:customer.email, item_title:i.title, amount:itemEffective(i), status:"pending", notes }));
-    const { data: orderRows } = await supabase.from("Orders").insert(rows).select("id");
-    const ref = orderRows && orderRows.length ? `#${String(orderRows[0].id).slice(0,8).toUpperCase()}` : "";
-    setOrderRef(ref);
+    await supabase.from("Orders").insert(rows).select("id");
     const itemsRowsHtml = items.map(i => `<p style="font-size:16px;font-weight:500;color:#1c1a18;margin-bottom:4px;">${i.title}${itemEffective(i) ? ` — $${Number(itemEffective(i)).toLocaleString()}` : ""}</p>`).join("");
     const itemsRowsHtmlPlain = items.map(i => `<p style="font-size:14px;color:#7a6f63;margin-bottom:4px;">${i.title}${itemEffective(i) ? ` — $${Number(itemEffective(i)).toLocaleString()}` : ""}</p>`).join("");
     await Promise.allSettled([
-      existingClient ? Promise.resolve() : supabase.from("Clients").insert([{ name:customer.name, email:customer.email, phone:customer.phone||null, address:customer.address||null, city:customer.city||null, state:customer.state||null, zip:customer.zip||null, country:customer.country||null }]),
+      existingClient ? Promise.resolve() : supabase.from("Clients").insert([{ name:fullName, email:customer.email, phone:customer.phone||null, address:customer.address||null, city:customer.city||null, state:customer.state||null, zip:customer.zip||null, country:customer.country||null }]),
       couponStatus === "valid" && couponData ? supabase.from("Leads").update({ coupon_used:true }).eq("id", couponData.id) : Promise.resolve(),
       sendMail(customer.email, `Order Received — ${itemsLabel} · Fonkiart`,
-        `<div style="font-family:Georgia,serif;max-width:480px;margin:0 auto;padding:32px;background:#fdfcf8;"><h1 style="font-size:26px;font-weight:300;color:#1c1a18;margin-bottom:6px;">Thank you, ${customer.name.split(" ")[0]}!</h1><p style="color:#7a6f63;font-size:15px;line-height:1.7;margin-bottom:24px;">Your order has been received. Fonkiart will confirm and reach out about shipping within 24–48 hours.</p><div style="background:#fff;border:1px solid #ece7dd;padding:20px 24px;margin-bottom:24px;"><p style="font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:#8a8078;margin-bottom:12px;">Order Summary</p>${ref?`<p style="font-size:11px;color:#8a8078;margin-bottom:8px;">Reference: <strong style="font-family:monospace;letter-spacing:.05em;">${ref}</strong></p>`:""}${itemsRowsHtml}${effectivePrice?`<p style="font-size:22px;color:#c9a96e;font-family:Georgia,serif;margin-top:8px;">Total: ${priceStr}${couponStatus==="valid"?` &nbsp;<span style="font-size:12px;color:#2d6a4f;">✓ ${discount}% coupon applied</span>`:""}</p>`:""} ${addr?`<p style="font-size:13px;color:#7a6f63;margin-top:10px;"><strong>Ship to:</strong> ${addr}</p>`:""}</div><p style="color:#7a6f63;font-size:13px;line-height:1.7;">Questions? Reply to this email and quote your reference number. You can also reach us at <a href="mailto:${BREVO_SENDER}" style="color:#c9a96e;">${BREVO_SENDER}</a>.</p><p style="color:#7a6f63;font-size:13px;margin-top:16px;">— Fonkiart</p></div>`
+        `<div style="font-family:Georgia,serif;max-width:480px;margin:0 auto;padding:32px;background:#fdfcf8;"><h1 style="font-size:26px;font-weight:300;color:#1c1a18;margin-bottom:6px;">Thank you, ${customer.firstName}!</h1><p style="color:#7a6f63;font-size:15px;line-height:1.7;margin-bottom:24px;">Your order has been received. Fonkiart will confirm and reach out about shipping within 24–48 hours.</p><div style="background:#fff;border:1px solid #ece7dd;padding:20px 24px;margin-bottom:24px;"><p style="font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:#8a8078;margin-bottom:12px;">Order Summary</p>${ref?`<p style="font-size:11px;color:#8a8078;margin-bottom:8px;">Reference: <strong style="font-family:monospace;letter-spacing:.05em;">${ref}</strong></p>`:""}${itemsRowsHtml}${effectivePrice?`<p style="font-size:22px;color:#c9a96e;font-family:Georgia,serif;margin-top:8px;">Total: ${priceStr}${couponStatus==="valid"?` &nbsp;<span style="font-size:12px;color:#2d6a4f;">✓ ${discount}% coupon applied</span>`:""}</p>`:""} ${addr?`<p style="font-size:13px;color:#7a6f63;margin-top:10px;"><strong>Ship to:</strong> ${addr}</p>`:""}</div><p style="color:#7a6f63;font-size:13px;line-height:1.7;">Questions? Reply to this email and quote your reference number. You can also reach us at <a href="mailto:${BREVO_SENDER}" style="color:#c9a96e;">${BREVO_SENDER}</a>.</p><p style="color:#7a6f63;font-size:13px;margin-top:16px;">— Fonkiart</p></div>`
       ),
-      sendMail(BREVO_SENDER, `🎨 New Order ${ref}: ${itemsLabel} — ${customer.name}`,
-        `<div style="font-family:Georgia,serif;max-width:520px;margin:0 auto;padding:32px;background:#fdfcf8;"><h2 style="font-size:22px;font-weight:300;color:#1c1a18;margin-bottom:4px;">New Order Received</h2>${ref?`<p style="font-family:monospace;font-size:14px;color:#c9a96e;margin-bottom:20px;">${ref}</p>`:""}${itemsRowsHtmlPlain}${effectivePrice?`<p style="font-size:14px;color:#7a6f63;margin-bottom:6px;margin-top:6px;"><strong>Total:</strong> ${priceStr}${couponStatus==="valid"?` (${discount}% coupon applied)`:""}</p>`:""}<p style="font-size:14px;color:#7a6f63;margin-bottom:6px;"><strong>Customer:</strong> ${customer.name}</p><p style="font-size:14px;color:#7a6f63;margin-bottom:6px;"><strong>Email:</strong> <a href="mailto:${customer.email}" style="color:#c9a96e;">${customer.email}</a></p>${customer.phone?`<p style="font-size:14px;color:#7a6f63;margin-bottom:6px;"><strong>Phone:</strong> ${customer.phone}</p>`:""} ${addr?`<p style="font-size:14px;color:#7a6f63;margin-bottom:6px;"><strong>Ship to:</strong> ${addr}</p>`:""}<p style="font-size:12px;color:#aaa;margin-top:24px;">Sent from fonkiart.com</p></div>`
+      sendMail(BREVO_SENDER, `🎨 New Order ${ref}: ${itemsLabel} — ${fullName}`,
+        `<div style="font-family:Georgia,serif;max-width:520px;margin:0 auto;padding:32px;background:#fdfcf8;"><h2 style="font-size:22px;font-weight:300;color:#1c1a18;margin-bottom:4px;">New Order Received</h2>${ref?`<p style="font-family:monospace;font-size:14px;color:#c9a96e;margin-bottom:20px;">${ref}</p>`:""}${itemsRowsHtmlPlain}${effectivePrice?`<p style="font-size:14px;color:#7a6f63;margin-bottom:6px;margin-top:6px;"><strong>Total:</strong> ${priceStr}${couponStatus==="valid"?` (${discount}% coupon applied)`:""}</p>`:""}<p style="font-size:14px;color:#7a6f63;margin-bottom:6px;"><strong>Customer:</strong> ${fullName}</p><p style="font-size:14px;color:#7a6f63;margin-bottom:6px;"><strong>Email:</strong> <a href="mailto:${customer.email}" style="color:#c9a96e;">${customer.email}</a></p>${customer.phone?`<p style="font-size:14px;color:#7a6f63;margin-bottom:6px;"><strong>Phone:</strong> ${customer.phone}</p>`:""} ${addr?`<p style="font-size:14px;color:#7a6f63;margin-bottom:6px;"><strong>Ship to:</strong> ${addr}</p>`:""}<p style="font-size:12px;color:#aaa;margin-top:24px;">Sent from fonkiart.com</p></div>`
       ),
     ]);
   };
@@ -133,9 +141,10 @@ export default function CheckoutModal({ items, settings, onClose }) {
             <div style={{ borderTop:"1px solid var(--border)", paddingTop:18, marginBottom:4 }}>
               <p style={{ fontSize:11, letterSpacing:".14em", textTransform:"uppercase", color:"var(--muted)", marginBottom:14 }}>Your Information</p>
               <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:10 }}>
-                <div className="fld"><label>Name *</label><input value={customer.name} onChange={e=>cv("name",e.target.value)} placeholder="Jane Smith" /></div>
-                <div className="fld"><label>Email *</label><input value={customer.email} onChange={e=>cv("email",e.target.value)} placeholder="jane@email.com" /></div>
+                <div className="fld"><label>First Name *</label><input value={customer.firstName} onChange={e=>cv("firstName",e.target.value)} placeholder="Jane" /></div>
+                <div className="fld"><label>Last Name *</label><input value={customer.lastName} onChange={e=>cv("lastName",e.target.value)} placeholder="Smith" /></div>
               </div>
+              <div className="fld"><label>Email *</label><input value={customer.email} onChange={e=>cv("email",e.target.value)} placeholder="jane@email.com" /></div>
               <div className="fld"><label>Phone</label><input value={customer.phone} onChange={e=>cv("phone",e.target.value)} placeholder="+1 305 000 0000" /></div>
               <p style={{ fontSize:11, letterSpacing:".14em", textTransform:"uppercase", color:"var(--muted)", margin:"12px 0 10px" }}>Shipping Address</p>
               <div className="fld"><label>Street</label><input value={customer.address} onChange={e=>cv("address",e.target.value)} placeholder="123 Main St" /></div>
@@ -164,7 +173,8 @@ export default function CheckoutModal({ items, settings, onClose }) {
               {couponStatus==="need-email"  && <p style={{fontSize:12,color:"#c0392b",marginTop:6}}>Enter your email address first, then apply the coupon.</p>}
               {couponStatus==="wrong-email" && <p style={{fontSize:12,color:"#c0392b",marginTop:6}}>This coupon is not linked to this email address.</p>}
             </div>
-            <button className="confirm-btn" style={{ background:canNext?"var(--gold)":"var(--border)", cursor:canNext?"pointer":"not-allowed", marginTop:12 }} disabled={!canNext} onClick={() => canNext && setStep(2)}>Continue →</button>
+            <button className="confirm-btn" style={{ background:canNext?"var(--gold)":"var(--border)", marginTop:12 }} onClick={handleContinue}>Continue →</button>
+            {checkoutError && <p style={{ fontSize:12, color:"#c0392b", marginTop:8, textAlign:"center" }}>{checkoutError}</p>}
           </>
         )}
 
@@ -178,7 +188,11 @@ export default function CheckoutModal({ items, settings, onClose }) {
                 {couponStatus==="valid" && <p style={{fontSize:12,color:"#2d6a4f",marginBottom:8}}>✓ {discount}% coupon applied</p>}
                 <div style={{ fontSize:13, color:"var(--muted)", marginBottom:5 }}>Send to this {settings.zelleLabel}:</div>
                 <div className="zelle-contact">{settings.zelleContact}</div>
-                <div className="zelle-steps">1. Open your bank app → Zelle<br />2. Send <strong>${Number(effectivePrice||0).toLocaleString()}</strong> to <strong>{settings.zelleContact}</strong><br />3. Memo: <strong>"{memoLabel}"</strong><br />4. Confirm below — we ship once payment clears ✓</div>
+                <div style={{ background:"var(--cream)", border:"1px solid var(--border)", padding:"10px 14px", margin:"12px 0" }}>
+                  <div style={{ fontSize:11, letterSpacing:".14em", textTransform:"uppercase", color:"var(--muted)", marginBottom:4 }}>Order Number</div>
+                  <div style={{ fontFamily:"monospace", fontSize:18, letterSpacing:".06em", color:"var(--ink)", fontWeight:600 }}>{orderRef}</div>
+                </div>
+                <div className="zelle-steps">1. Open your bank app → Zelle<br />2. Send <strong>${Number(effectivePrice||0).toLocaleString()}</strong> to <strong>{settings.zelleContact}</strong><br />3. Memo: copy <strong>{orderRef}</strong> and paste it into your Zelle transaction memo/note<br />4. Confirm below — we ship once payment clears ✓</div>
               </div>
             )}
             {method === "venmo" && (
@@ -187,7 +201,11 @@ export default function CheckoutModal({ items, settings, onClose }) {
                 <div className="zelle-amount">${Number(effectivePrice||0).toLocaleString()}</div>
                 {couponStatus==="valid" && <p style={{fontSize:12,color:"#2d6a4f",marginBottom:8}}>✓ {discount}% coupon applied</p>}
                 <div className="zelle-contact">{venmoHandle}</div>
-                <div className="zelle-steps">1. Open Venmo → Search <strong>{venmoHandle}</strong><br />2. Send <strong>${Number(effectivePrice||0).toLocaleString()}</strong><br />3. Note: <strong>"{memoLabel}"</strong><br />4. Confirm below — we ship once payment clears ✓</div>
+                <div style={{ background:"var(--cream)", border:"1px solid var(--border)", padding:"10px 14px", margin:"12px 0" }}>
+                  <div style={{ fontSize:11, letterSpacing:".14em", textTransform:"uppercase", color:"var(--muted)", marginBottom:4 }}>Order Number</div>
+                  <div style={{ fontFamily:"monospace", fontSize:18, letterSpacing:".06em", color:"var(--ink)", fontWeight:600 }}>{orderRef}</div>
+                </div>
+                <div className="zelle-steps">1. Open Venmo → Search <strong>{venmoHandle}</strong><br />2. Send <strong>${Number(effectivePrice||0).toLocaleString()}</strong><br />3. Note: copy <strong>{orderRef}</strong> and paste it into the Venmo note<br />4. Confirm below — we ship once payment clears ✓</div>
               </div>
             )}
             {method === "cashapp" && (
@@ -196,7 +214,11 @@ export default function CheckoutModal({ items, settings, onClose }) {
                 <div className="zelle-amount">${Number(effectivePrice||0).toLocaleString()}</div>
                 {couponStatus==="valid" && <p style={{fontSize:12,color:"#2d6a4f",marginBottom:8}}>✓ {discount}% coupon applied</p>}
                 <div className="zelle-contact">{cashAppHandle}</div>
-                <div className="zelle-steps">1. Open Cash App → Search <strong>{cashAppHandle}</strong><br />2. Send <strong>${Number(effectivePrice||0).toLocaleString()}</strong><br />3. Note: <strong>"{memoLabel}"</strong><br />4. Confirm below — we ship once payment clears ✓</div>
+                <div style={{ background:"var(--cream)", border:"1px solid var(--border)", padding:"10px 14px", margin:"12px 0" }}>
+                  <div style={{ fontSize:11, letterSpacing:".14em", textTransform:"uppercase", color:"var(--muted)", marginBottom:4 }}>Order Number</div>
+                  <div style={{ fontFamily:"monospace", fontSize:18, letterSpacing:".06em", color:"var(--ink)", fontWeight:600 }}>{orderRef}</div>
+                </div>
+                <div className="zelle-steps">1. Open Cash App → Search <strong>{cashAppHandle}</strong><br />2. Send <strong>${Number(effectivePrice||0).toLocaleString()}</strong><br />3. Note: copy <strong>{orderRef}</strong> and paste it into the Cash App note<br />4. Confirm below — we ship once payment clears ✓</div>
               </div>
             )}
             {method === "card" && (
