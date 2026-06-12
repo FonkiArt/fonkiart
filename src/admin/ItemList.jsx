@@ -53,10 +53,10 @@ export default function ItemList({ data, deleteArtwork, patchArtwork, onEdit }) 
             {!item.price && !item.isSold && (
               <div style={{ marginTop:7, background:"#fffbf0", border:"1px solid #e8c840", borderLeft:"3px solid #e8b800", borderRadius:4, padding:"7px 11px", fontFamily:"'DM Sans',sans-serif" }}>
                 <div style={{ display:"flex", alignItems:"center", gap:6, marginBottom:3 }}>
-                  <span style={{ fontSize:13 }}>⚠</span>
-                  <span style={{ fontSize:12, fontWeight:600, color:"#6b4c00", letterSpacing:".02em" }}>Missing Price — Not listed on Instagram Shopping</span>
+                  <span style={{ fontSize:15 }}>⚠</span>
+                  <span style={{ fontSize:14, fontWeight:600, color:"#6b4c00", letterSpacing:".02em" }}>Missing Price — Not listed on Instagram Shopping</span>
                 </div>
-                <div style={{ fontSize:11, color:"#8a6a20", lineHeight:1.6 }}>
+                <div style={{ fontSize:13, color:"#8a6a20", lineHeight:1.6 }}>
                   Meta requires a price for every product in the catalog. Without it, this piece is excluded from the Instagram Shopping feed and cannot be tagged in posts or discovered through the Shop tab. Add a price to make it shoppable.
                 </div>
               </div>

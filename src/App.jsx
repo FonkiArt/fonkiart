@@ -62,7 +62,9 @@ export default function App() {
   const [adminAuthed, setAdminAuthed] = useState(() => localStorage.getItem("fonkiart-admin-authed") === "1");
   const [adminTab, setAdminTabState] = useState(() => localStorage.getItem("fonkiart-admin-tab") || "dashboard");
   const setAdminTab = (t) => { localStorage.setItem("fonkiart-admin-tab", t); setAdminTabState(t); };
-  const [collectorsClient, setCollectorsClient] = useState(null);
+  const [collectorsClient, setCollectorsClient] = useState(() => {
+    try { return JSON.parse(localStorage.getItem("fonkiart-collectors-client") || "null"); } catch { return null; }
+  });
 
   const addToCart = (item) => {
     setCart(prev => prev.find(i => i.id === item.id) ? prev : [...prev, item]);
@@ -123,6 +125,10 @@ export default function App() {
 
   useEffect(() => { localStorage.setItem("fonkiart-page", page); }, [page]);
   useEffect(() => { localStorage.setItem("fonkiart-cart", JSON.stringify(cart)); }, [cart]);
+  useEffect(() => {
+    if (collectorsClient) localStorage.setItem("fonkiart-collectors-client", JSON.stringify(collectorsClient));
+    else localStorage.removeItem("fonkiart-collectors-client");
+  }, [collectorsClient]);
 
   // Browser back/forward support — without this, navigating into a page
   // (e.g. Admin) never adds a history entry, so the back button leaves the

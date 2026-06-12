@@ -36,9 +36,9 @@ export default function AdminPanel({ data, updateData, addArtwork, editArtwork, 
       <div className="admin-top">
         <span className="admin-top-title">Fonkiart · Admin Panel</span>
         <div style={{ display:"flex", gap:10 }}>
-          <button className="btn-s" style={{ color:"#fff", borderColor:"rgba(255,255,255,.25)", fontSize:11, fontWeight:700 }} onClick={onViewRoom}>🔑 Collectors Room</button>
-          <button className="btn-s" style={{ color:"#fff", borderColor:"rgba(255,255,255,.25)", fontWeight:700 }} onClick={onBack}>← Back to Site</button>
-          <button className="btn-s" style={{ color:"rgba(255,255,255,.5)", borderColor:"rgba(255,255,255,.15)", fontSize:11 }} onClick={onLogout}>Logout</button>
+          <button className="btn-s" onClick={onViewRoom}>🔑 Collectors Room</button>
+          <button className="btn-s" onClick={onBack}>← Back to Site</button>
+          <button className="btn-s" onClick={onLogout}>Logout</button>
         </div>
       </div>
       <div className="crm-tabs">

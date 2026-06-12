@@ -14,16 +14,13 @@ export default function FloatingCart({ cart, removeFromCart, settings, cartOpen,
               <button onClick={() => setCartOpen(false)} style={{ background:"none", border:"none", cursor:"pointer", color:"var(--muted)", fontSize:20, lineHeight:1, padding:0 }}>✕</button>
             </div>
             {cart.length > 0 && (
-              <div style={{ padding:"12px 24px", borderBottom:"1px solid var(--border)", background:"var(--cream)" }}>
-                <div style={{ fontSize:12, color:"var(--muted)", letterSpacing:".04em", marginBottom: cart.length > 1 ? 10 : 0 }}>
-                  Ready to <strong style={{ color:"var(--ink)", textTransform:"uppercase", letterSpacing:".1em" }}>Checkout?</strong> {cart.length > 1 ? "Check out everything at once, or each item individually below." : "Tap \"Checkout\" below."}
-                </div>
-                {cart.length > 1 && (
-                  <button onClick={() => setCheckout(cart)}
-                    style={{ width:"100%", background:"var(--gold)", border:"none", color:"#fff", cursor:"pointer", fontSize:11, letterSpacing:".12em", textTransform:"uppercase", padding:"10px 14px", fontFamily:"'DM Sans',sans-serif", fontWeight:600 }}>
-                    Checkout All ({cart.length}) →
-                  </button>
-                )}
+              <div style={{ padding:"12px 24px", borderBottom:"1px solid var(--border)", background:"var(--cream)", fontSize:12, color:"var(--muted)", letterSpacing:".04em" }}>
+                Ready to <strong style={{ color:"var(--ink)", textTransform:"uppercase", letterSpacing:".1em" }}>Checkout?</strong> Tap "Checkout" on an item below…
+                <br />Or{" "}
+                <button onClick={() => setCheckout(cart)}
+                  style={{ background:"none", border:"none", padding:0, margin:0, cursor:"pointer", color:"var(--gold)", fontWeight:700, fontSize:12, letterSpacing:".08em", textTransform:"uppercase", fontFamily:"'DM Sans',sans-serif", textDecoration:"underline", textUnderlineOffset:3 }}>
+                  Click Here » CHECKOUT
+                </button>
               </div>
             )}
             <div className="cart-drawer-body">

@@ -298,8 +298,36 @@ body { font-family:'DM Sans',sans-serif;background:#fff;color:#1c1a18; }
 .admin-wrap .fld textarea,
 .admin-wrap .fld select { font-size:16px; }
 .admin-wrap .img-drop { font-size:15px; }
+/* ── ADMIN BUTTONS — unified pink w/ white frame, same font ── */
 .admin-wrap .btn-p,
-.admin-wrap .btn-s { font-size:14px; }
+.admin-wrap .btn-s {
+  font-size:14px;
+  font-family:'DM Sans',sans-serif;
+  letter-spacing:.12em;
+  text-transform:uppercase;
+  background:var(--sidebar-bg);
+  color:#fff;
+  border:2px solid #fff;
+  border-radius:2px;
+}
+.admin-wrap .btn-p:hover,
+.admin-wrap .btn-s:hover {
+  background:var(--label);
+  color:#fff;
+  border-color:#fff;
+}
+/* admin-top sits on the same pink — keep those buttons as a transparent
+   white-framed outline so they don't disappear against the bar */
+.admin-top .btn-s {
+  background:transparent;
+  border:2px solid rgba(255,255,255,.6);
+  color:#fff;
+}
+.admin-top .btn-s:hover {
+  background:rgba(255,255,255,.18);
+  border-color:#fff;
+  color:#fff;
+}
 .admin-wrap .btn-d { font-size:13px; }
 .admin-wrap .ok-msg,
 .admin-wrap .warn-msg,

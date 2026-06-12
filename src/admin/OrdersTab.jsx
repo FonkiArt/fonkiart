@@ -274,7 +274,7 @@ export default function OrdersTab() {
           </div>
 
           <div style={{borderTop:"1px solid var(--border)",marginTop:24,paddingTop:20,display:"flex",gap:12,alignItems:"center"}}>
-            <button className="btn-p" style={{background:"var(--sidebar-bg)"}} onClick={sendInvoice} disabled={invSending}>
+            <button className="btn-p" onClick={sendInvoice} disabled={invSending}>
               {invSending ? "Sending…" : "Send Invoice →"}
             </button>
             <p style={{fontSize:12,color:"var(--muted)",margin:0}}>A payment link will be emailed to the client automatically.</p>
