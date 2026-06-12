@@ -1,7 +1,8 @@
 import { useState, useEffect, Fragment } from "react";
 import { supabase, BREVO_SENDER } from "../lib/supabase";
 import { sendEmail } from "../utils/helpers";
-export default function OrdersTab() {
+export default function OrdersTab({ data }) {
+  const catalog = data?.items || [];
   const [orders, setOrders] = useState([]);
   const [clients, setClients] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -221,7 +222,17 @@ export default function OrdersTab() {
             {/* RIGHT — Invoice Details */}
             <div>
               <p style={{fontSize:11,letterSpacing:".14em",textTransform:"uppercase",color:"var(--muted)",marginBottom:14,borderBottom:"1px solid var(--border)",paddingBottom:8}}>Invoice Details</p>
-              <div className="fld"><label>Artwork / Item *</label><input value={inv.item_title} onChange={e=>iv("item_title",e.target.value)} placeholder="Lady in Blue" /></div>
+              <div className="fld">
+                <label>Artwork / Item *</label>
+                <select value="" onChange={e => {
+                  const it = catalog.find(i => String(i.id) === e.target.value);
+                  if (it) { iv("item_title", it.title); if (it.salePrice || it.price) iv("amount", String(it.salePrice || it.price)); }
+                }} style={{marginBottom:6}}>
+                  <option value="">— Select from catalog —</option>
+                  {catalog.map(it => <option key={it.id} value={it.id}>{it.title}{it.isSold?" (Sold)":""}</option>)}
+                </select>
+                <input value={inv.item_title} onChange={e=>iv("item_title",e.target.value)} placeholder="Or type a custom item title" />
+              </div>
               <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10}}>
                 <div className="fld"><label>Amount (USD) *</label><input type="number" value={inv.amount} onChange={e=>iv("amount",e.target.value)} placeholder="350" /></div>
                 <div className="fld"><label>Due Date (optional)</label><input type="date" value={inv.due_date} onChange={e=>iv("due_date",e.target.value)} /></div>
@@ -351,7 +362,17 @@ export default function OrdersTab() {
             {/* RIGHT — Order Details */}
             <div>
               <p style={{fontSize:11,letterSpacing:".14em",textTransform:"uppercase",color:"var(--muted)",marginBottom:14,borderBottom:"1px solid var(--border)",paddingBottom:8}}>Order Details</p>
-              <div className="fld"><label>Artwork / Item *</label><input value={form.item_title} onChange={e=>f("item_title",e.target.value)} placeholder="Lady in Blue" /></div>
+              <div className="fld">
+                <label>Artwork / Item *</label>
+                <select value="" onChange={e => {
+                  const it = catalog.find(i => String(i.id) === e.target.value);
+                  if (it) { f("item_title", it.title); if (it.salePrice || it.price) f("amount", String(it.salePrice || it.price)); }
+                }} style={{marginBottom:6}}>
+                  <option value="">— Select from catalog —</option>
+                  {catalog.map(it => <option key={it.id} value={it.id}>{it.title}{it.isSold?" (Sold)":""}</option>)}
+                </select>
+                <input value={form.item_title} onChange={e=>f("item_title",e.target.value)} placeholder="Or type a custom item title" />
+              </div>
               <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10}}>
                 <div className="fld"><label>Amount (USD)</label><input type="number" value={form.amount} onChange={e=>f("amount",e.target.value)} placeholder="350" /></div>
                 <div className="fld"><label>Status</label>

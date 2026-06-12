@@ -70,7 +70,7 @@ export default function AdminPanel({ data, updateData, addArtwork, editArtwork, 
           <ErrorBoundary key={tab}>
             {tab==="dashboard" && <DashboardTab goToTab={setTabAndSave} goToSettings={(section) => { setTabAndSave("settings"); setSettingsJumpTo(section); }} />}
             {tab==="leads"    && <LeadsTab discount={data.settings.couponDiscount ?? 15} />}
-            {tab==="orders"   && <OrdersTab />}
+            {tab==="orders"   && <OrdersTab data={data} />}
             {tab==="requests" && <RequestsTab />}
             {tab==="clients"  && <ClientsTab />}
           </ErrorBoundary>
